@@ -1,0 +1,7 @@
+#audiohackr {
+  @extend .cf;
+  border: $audiohackr-border-width solid $audiohackr-border-color;
+  border-radius: 5px;
+  margin: 0 auto;
+  width: $audiohackr-width;
+}

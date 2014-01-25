@@ -1,0 +1,19 @@
+.knob {
+  border: $knob-border-width solid $knob-border-color;
+  border-radius: $knob-border-radius;
+  width: $knob-width;
+  height: $knob-height;
+}
+
+.knob-group {
+  @extend .cf;
+
+  .knob {
+    float: left;
+    margin-right: $knob-margin;
+
+    &:last-child {
+      margin-right: 0;
+    }
+  }
+}

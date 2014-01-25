@@ -1,0 +1,11 @@
+.pad {
+  border: $pad-border-width solid $pad-border-color;
+  float: left;
+  height: $pad-height;
+  margin: 0 $pad-margin $pad-margin 0;
+  width: $pad-width;
+
+  &:nth-of-type(4n + 0) {
+    margin-right: 0;
+  }
+}

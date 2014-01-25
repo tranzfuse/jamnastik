@@ -1,0 +1,55 @@
+* {
+  box-sizing: border-box; }
+
+body {
+  background-color: white;
+  color: #999999;
+  font-family: helvetica, arial, sans-serif; }
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: normal; }
+
+.cf:before, #audiohackr:before, .knob-group:before, #drum-machine:before, .cf:after, #audiohackr:after, .knob-group:after, #drum-machine:after {
+  content: " ";
+  display: table; }
+.cf:after, #audiohackr:after, .knob-group:after, #drum-machine:after {
+  clear: both; }
+
+#audiohackr {
+  border: 0.25em solid #999999;
+  border-radius: 5px;
+  margin: 0 auto;
+  width: 62.75em; }
+
+#controls {
+  float: left;
+  padding: 2em;
+  width: 20em; }
+
+.knob {
+  border: 0.125em solid #999999;
+  border-radius: 500px;
+  width: 4em;
+  height: 4em; }
+
+.knob-group .knob {
+  float: left;
+  margin-right: 2em; }
+  .knob-group .knob:last-child {
+    margin-right: 0; }
+
+#drum-machine {
+  border: none;
+  border-left: 0.25em solid #999999;
+  float: right;
+  padding: 2em 2em 0;
+  width: 42.25em; }
+
+.pad {
+  border: 0.25em solid #999999;
+  float: left;
+  height: 8em;
+  margin: 0 2em 2em 0;
+  width: 8em; }
+  .pad:nth-of-type(4n + 0) {
+    margin-right: 0; }
