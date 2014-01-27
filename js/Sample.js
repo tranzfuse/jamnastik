@@ -17,8 +17,14 @@ Sample.prototype.setSource = function (source) {
   return this;
 }
 
+/**
+ * @method
+ * @param context {object} the AudioContext instance
+ * @param soundBuffer {object} the BufferSource instance
+ * @param when {number} when to being playback
+ * @return this
+ */
 Sample.prototype.play = function (context, soundBuffer, when) {
-  context = context || new window.AudioContext();
   when = when || 0;
 
   // create sample's sound source

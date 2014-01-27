@@ -4,16 +4,3 @@
   width: $knob-width;
   height: $knob-height;
 }
-
-.knob-group {
-  @extend .cf;
-
-  .knob {
-    float: left;
-    margin-right: $knob-margin;
-
-    &:last-child {
-      margin-right: 0;
-    }
-  }
-}

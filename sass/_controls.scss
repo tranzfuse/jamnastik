@@ -3,3 +3,17 @@
   padding: $controls-padding;;
   width: $controls-width;
 }
+
+.control-group {
+  @extend .cf;
+  margin: 0 0 $control-margin;
+}
+
+.control-inline {
+  float: left;
+  margin-right: $control-margin;
+
+  &:last-child {
+    margin-right: 0;
+  }
+}

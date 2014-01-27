@@ -3,7 +3,7 @@ var Pad = require('./Pad');
 var Sample = require('./Sample');
 
 /**
- * @var context {object} instance of AudioContext.
+ * @var context {object} instance of the AudioContext class.
  */
 var context;
 
@@ -52,8 +52,17 @@ var sampleUrls = [
 var samples = [];
 
 // Sort out the AudioContext
-window.AudioContext = window.AudioContext || window.webkitAudioContext;
-context = new AudioContext();
+window.AudioContext = window.AudioContext ||
+  window.webkitAudioContext ||
+  window.mozAudioContext ||
+  window.oAudioContext ||
+  window.msAudioContext;
+
+if (window.AudioContext) {
+  context = new AudioContext();
+} else {
+  // Tell user to use a better browser.
+}
 
 // Create new sample instances, store in samples array,
 // attach to pad.

@@ -12,7 +12,7 @@ $border-width: .25em;
 $border-color: #999;
 
 
-// Audiohackr (Stupid name)
+// audiohack (Stupid name)
 // -----------------------------------
 
 // Knobs
@@ -21,14 +21,15 @@ $knob-border-radius: 500px; //turns a box into a circle
 $knob-border-width: $border-width / 2;
 $knob-width: 4em;
 $knob-height: 4em;
-$knob-margin: 2em;
 $knobs-per-group: 3;
 
 // Controls
+$control-margin: 2em;
+
 $controls-border-color: $border-color;
 $controls-border-width: $border-width;
 $controls-padding: 2em;
-$controls-width: ($knob-width + $knob-margin) * $knobs-per-group + $controls-padding * 2 - $knob-margin;
+$controls-width: ($knob-width + $control-margin) * $knobs-per-group + $controls-padding * 2 - $control-margin;
 
 // Drum Pad
 $pads-per-row: 4;
@@ -44,7 +45,7 @@ $drum-machine-border-width: $border-width;
 $drum-machine-padding: 2em;
 $drum-machine-width: ($pad-width + $pad-margin) * $pads-per-row + ($drum-machine-padding * 2) + $drum-machine-border-width - $pad-margin;
 
-// AudioHackr
-$audiohackr-border-width: $border-width;
-$audiohackr-border-color: $border-color;
-$audiohackr-width: $controls-width + $drum-machine-width + ($audiohackr-border-width * 2);
+// audiohack
+$audiohack-border-width: $border-width;
+$audiohack-border-color: $border-color;
+$audiohack-width: $controls-width + $drum-machine-width + ($audiohack-border-width * 2);
