@@ -1,5 +1,10 @@
+var util = require('util');
+var EventEmitter = require('events').EventEmitter;
 var sampleUrls = require('./sampleUrls');
 var DrumMachine = require('./DrumMachine');
+var GainControl = require('./GainControl');
+var FilterControl = require('./FilterControl');
+var QControl = require('./QControl');
 var BufferLoader = require('./BufferLoader');
 var Sample = require('./Sample');
 
@@ -18,6 +23,9 @@ function App() {
   this.bufferLoader = null;
   this.bufferList = null;
   this.drumMachine = null;
+  this.gainControl = null;
+  this.filterControl = null;
+  this.qControl = null;
   this.sampleUrls = null;
   this.samples = [];
 }
@@ -31,8 +39,13 @@ App.prototype.init = function() {
     callback = this.callbackLoaded.bind(this);
 
   if (window.AudioContext) {
+    this.pubsub = new EventEmitter();
+    this.pubsub.setMaxListeners(24);
     this.context = new AudioContext();
     this.drumMachine = new DrumMachine('drum-machine');
+    this.gainControl = new GainControl('gain-control');
+    this.filterControl = new FilterControl('filter-control', 'filter-toggle', 'lowpass', 440);
+    this.qControl = new QControl('q-control');
     this.sampleUrls = sampleUrls;
     this.bufferLoader = new BufferLoader(
       this.context,
@@ -55,13 +68,21 @@ App.prototype.init = function() {
  */
 App.prototype.callbackLoaded = function(bufferList) {
   this.setBufferList(bufferList);
+
+  // @TODO manage all the controls within a ControlPanel instance
+  this.gainControl.init(this.context.createGain());
+  this.filterControl.init(this.context.createBiquadFilter());
+  // q adjusts the Q value of the BiquadFilterNode instance created for the filterControl
+  this.qControl.init(this.filterControl.node);
+
   this.createSamples();
-  this.drumMachine.init(this.samples, this.context, this.bufferList);
+  this.drumMachine.init(this.samples);
 }
 
 App.prototype.createSamples = function() {
   for (var i = 0; i < this.bufferList.length; i++) {
-    this.samples[i] = new Sample(this.sampleUrls[i], this.bufferList[i]);
+    this.samples[i] = new Sample(this.filterControl.node, this.gainControl.node, this.sampleUrls[i], this.bufferList[i]);
+    this.samples[i].init(this.filterControl.isEnabled);
   }
   return this;
 }

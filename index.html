@@ -17,7 +17,17 @@
       </div>
 
       <div class="control-group">
-        <input type="range" value="0" min="0" max="100" id="volume">
+        <h3>Filter <input type="checkbox" id="filter-toggle"></h3>
+        <h4>Low pass</h4>
+        <input type="range" value="1" min="0" max="1" step="0.01" id="filter-control">
+
+        <h4>Q</h4>
+        <input type="range" value="0" min="0" max="1" step="0.01" id="q-control">
+      </div>
+
+      <div class="control-group">
+        <h3>Vol.</h3>
+        <input type="range" value="100" min="0" max="100" id="gain-control">
       </div>
 
     </div>
