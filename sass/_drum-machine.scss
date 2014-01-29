@@ -1,8 +1,0 @@
-#drum-machine {
-  @extend .cf;
-  border: none;
-  border-left: $drum-machine-border-width solid $drum-machine-border-color;
-  float: right;
-  padding: $drum-machine-padding $drum-machine-padding 0;
-  width: $drum-machine-width;
-}

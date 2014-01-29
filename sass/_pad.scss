@@ -1,11 +1,32 @@
 .pad {
+  background-color: #fff;
   border: $pad-border-width solid $pad-border-color;
   float: left;
   height: $pad-height;
   margin: 0 $pad-margin $pad-margin 0;
+  transition: background-color .1s ease-in;
   width: $pad-width;
 
-  &:nth-of-type(4n + 0) {
+  &:hover {
+    background-color: lighten($pad-enabled-bg-color, 50%);
+  }
+
+  &.enabled {
+    background-color: $pad-enabled-bg-color;
+  }
+
+  &:nth-of-type(8n + 0) {
     margin-right: 0;
+  }
+}
+
+// Contexts
+.active {
+  > .pad {
+    background-color: $pad-active-bg-color;
+
+    &.enabled {
+      background-color: darken($pad-enabled-bg-color, 10%);
+    }
   }
 }

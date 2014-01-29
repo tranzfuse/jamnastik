@@ -8,14 +8,18 @@
 </head>
 <body>
   <div id="audiohack">
-    <div id="controls">
+    <div id="step-sequencer"></div>
+  </div>
 
+  <div id="control-panel">
+    <div class="controls">
+      <!--
       <div class="control-group">
         <div class="knob control-inline"></div>
         <div class="knob control-inline"></div>
         <div class="knob control-inline"></div>
       </div>
-
+      -->
       <div class="control-group">
         <h3>Filter <input type="checkbox" id="filter-toggle"></h3>
         <h4>Low pass</h4>
@@ -26,33 +30,20 @@
       </div>
 
       <div class="control-group">
-        <h3>Vol.</h3>
+        <h3>Volume</h3>
         <input type="range" value="100" min="0" max="100" id="gain-control">
       </div>
-
     </div>
-    <div id="drum-machine">
-      <div class="pad" id="pad1"></div>
-      <div class="pad" id="pad2"></div>
-      <div class="pad" id="pad3"></div>
-      <div class="pad" id="pad4"></div>
 
-      <div class="pad" id="pad5"></div>
-      <div class="pad" id="pad6"></div>
-      <div class="pad" id="pad7"></div>
-      <div class="pad" id="pad8"></div>
-
-      <div class="pad" id="pad9"></div>
-      <div class="pad" id="pad10"></div>
-      <div class="pad" id="pad11"></div>
-      <div class="pad" id="pad12"></div>
-
-      <div class="pad" id="pad13"></div>
-      <div class="pad" id="pad14"></div>
-      <div class="pad" id="pad15"></div>
-      <div class="pad" id="pad16"></div>
+    <div class="controls" id="transport">
+      <div class="control-group">
+        <div class="control-inline glyphicon glyphicon-pause" id="pause"></div>
+        <div class="control-inline glyphicon glyphicon-play" id="play"></div>
+      </div>
     </div>
+
   </div>
+
 
   <script src="public/js/bundle.js"></script>
 

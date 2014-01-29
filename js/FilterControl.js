@@ -36,7 +36,7 @@ FilterControl.prototype.init = function(node) {
  */
 FilterControl.prototype._setFilterType = function(type) {
   if (this.node === null) {
-    throw new TypeError('FilterControl.node is not defined', 'FilterControl');
+    throw new ReferenceError('FilterControl.node is not defined', 'FilterControl');
   }
   this.node.type = type || 'lowpass';
   return this;
@@ -49,7 +49,7 @@ FilterControl.prototype._setFilterType = function(type) {
  */
 FilterControl.prototype._setCutoffFrequency = function(frequency) {
   if (this.node === null) {
-    throw new TypeError('FilterControl.node is not defined', 'FilterControl');
+    throw new ReferenceError('FilterControl.node is not defined', 'FilterControl');
   }
   this.node.frequency.value = frequency || 440;
 }

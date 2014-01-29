@@ -1,0 +1,9 @@
+#control-panel {
+  position: fixed;
+  left: 0;
+  top: $control-panel-margin;
+
+  > div {
+    margin-bottom: $control-panel-margin;
+  }
+}

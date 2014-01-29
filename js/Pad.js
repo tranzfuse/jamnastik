@@ -6,6 +6,8 @@ function Pad(id, sample, key, domEl) {
   this.sample = sample;
   this.key = key;
   this.domEl = domEl;
+  this.enabled = false;
+  this.enabledClass = 'enabled';
 }
 
 /**
@@ -17,6 +19,15 @@ function Pad(id, sample, key, domEl) {
 Pad.prototype.press = function(when) {
   this.sample.play(when);
   return this;
+}
+
+Pad.prototype.toggleEnabled = function() {
+  this.enabled = !this.enabled;
+  if (this.enabled) {
+    this.domEl.classList.add(this.enabledClass);
+  } else {
+    this.domEl.classList.remove(this.enabledClass);
+  }
 }
 
 module.exports = Pad;

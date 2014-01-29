@@ -8,8 +8,9 @@ $text-color: #999;
 // Typography
 $font-family: helvetica, arial, sans-serif;
 
-$border-width: .25em;
+$border-width: .25em / 4;
 $border-color: #999;
+$border-radius: 5px;
 
 
 // audiohack (Stupid name)
@@ -18,34 +19,50 @@ $border-color: #999;
 // Knobs
 $knob-border-color: $border-color;
 $knob-border-radius: 500px; //turns a box into a circle
-$knob-border-width: $border-width / 2;
-$knob-width: 4em;
-$knob-height: 4em;
+$knob-border-width: $border-width;
+$knob-width: 3em;
+$knob-height: 3em;
 $knobs-per-group: 3;
 
+// Control
+$control-margin: 1em;
+
 // Controls
-$control-margin: 2em;
-
-$controls-border-color: $border-color;
 $controls-border-width: $border-width;
-$controls-padding: 2em;
-$controls-width: ($knob-width + $control-margin) * $knobs-per-group + $controls-padding * 2 - $control-margin;
+$controls-border-color: $border-color;
+$controls-padding: 1em;
 
-// Drum Pad
-$pads-per-row: 4;
+// Control Panel
+$control-panel-border-color: $border-color;
+$control-panel-border-width: $border-width;
+$control-panel-margin: 2em;
+$control-panel-padding: 1em;
+$control-panel-width: ($knob-width + $control-margin) * $knobs-per-group + $control-panel-padding * 2 - $control-margin + ($control-panel-border-width * 2);
+
+// Pad
+$pads-per-row: 8;
 $pad-border-color: $border-color;
 $pad-border-width: $border-width;
-$pad-margin: 2em;
-$pad-width: 8em;
-$pad-height: 8em;
+$pad-margin: 1em;
+$pad-width: 4em;
+$pad-height: 4em;
+$pad-enabled-bg-color: #0099cc;
+$pad-active-bg-color: #eee;
 
-// Drum Machine
-$drum-machine-border-color: $border-color;
-$drum-machine-border-width: $border-width;
-$drum-machine-padding: 2em;
-$drum-machine-width: ($pad-width + $pad-margin) * $pads-per-row + ($drum-machine-padding * 2) + $drum-machine-border-width - $pad-margin;
+// Step Sequencer
+$step-sequencer-border-color: $border-color;
+$step-sequencer-border-width: $border-width;
+$step-sequencer-padding: 2em;
+$step-sequencer-width: ($pad-width + $pad-margin) * $pads-per-row + ($step-sequencer-padding * 2) + $step-sequencer-border-width - $pad-margin;
+
+// Transport
+$transport-border-color: $border-color;
+$transport-border-width: $border-width;
+$transport-padding: 2em;
+$transport-width: $control-panel-width;
 
 // audiohack
 $audiohack-border-width: $border-width;
 $audiohack-border-color: $border-color;
-$audiohack-width: $controls-width + $drum-machine-width + ($audiohack-border-width * 2);
+$audiohack-margin: 2em;
+$audiohack-width: $step-sequencer-width + ($audiohack-border-width * 2);
