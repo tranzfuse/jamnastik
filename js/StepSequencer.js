@@ -77,10 +77,10 @@ StepSequencer.prototype._setupGrid = function() {
   return this;
 }
 
-StepSequencer.prototype.draw = function(rowindex) {
-  var previousIndex = (rowindex + 7) % 8;
+StepSequencer.prototype.draw = function(rowIndex) {
+  var previousIndex = (rowIndex + 7) % this.sequenceLength;
 
-  this.rows.getByIndex(rowindex).domEl.classList.add(this.rowActiveClass);
+  this.rows.getByIndex(rowIndex).domEl.classList.add(this.rowActiveClass);
   this.rows.getByIndex(previousIndex).domEl.classList.remove(this.rowActiveClass);
 }
 
@@ -110,7 +110,7 @@ StepSequencer.prototype._handleEvents = function() {
 StepSequencer.prototype.play = function (time) {
   this.scheduler.currentNote = this.scheduler.currentNote || 0;
   this.scheduler.startTime = this.context.currentTime + 0.005; // what's this 0.005 about?
-  this.scheduler.nextNoteTime = 0;
+  this.scheduler.nextNoteTime = 0.0;
   this.scheduler.run();    // kick off scheduling
 }
 

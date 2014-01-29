@@ -5,6 +5,9 @@
  * Stolen and mangled with pride from:
  * https://github.com/cwilso/metronome/blob/master/js/metronome.js
  *
+ * Also borrowed some ideas from this one:
+ * http://chromium.googlecode.com/svn/trunk/samples/audio/shiny-drum-machine.html
+ *
  * @constructor
  */
 function Scheduler(context, pubsub) {
@@ -23,7 +26,7 @@ function Scheduler(context, pubsub) {
   this.currentNote;
 
   /**
-   * What is the time Mr. Templar?
+   * What is the current time Mr. Templar?
    */
   this.currentTime = 0;
 
@@ -36,14 +39,14 @@ function Scheduler(context, pubsub) {
    * How frequently to call scheduling function
    * (in milliseconds)
    */
-  this.lookahead = 25.0;
+  this.lookahead = 0.0;
 
   /**
    * How far ahead to schedule audio (sec)
    * This is calculated from lookahead, and overlaps
    * with next interval (in case the timer is late)
    */
-  this.scheduleAheadTime = 0.1;
+  this.scheduleAheadTime = 0.2;
 
   /**
    * when the next note is due.
@@ -61,10 +64,18 @@ function Scheduler(context, pubsub) {
   this.lastDrawTime = -1;
 }
 
+/**
+ * @method setup the instance
+ * @return this
+ */
 Scheduler.prototype.init = function(stepSequencer) {
   this.stepSequencer = stepSequencer;
+  return this;
 }
 
+/**
+ * @method increment currentNote and advance nextNoteTime
+ */
 Scheduler.prototype.nextNote = function() {
   // Advance current note and time by a 16th note...
   // Notice this picks up the CURRENT tempo value to calculate beat length.
@@ -80,6 +91,11 @@ Scheduler.prototype.nextNote = function() {
   }
 }
 
+/**
+ * @method the "loop" to "schedule" notes to be played.
+ * Also tries to sync drawing time with sound playback.
+ * Is triggered when play button is pressed, recurses while step sequencer is playing.
+ */
 Scheduler.prototype.run = function() {
   var self = this,
     activeRowSamples = [];
@@ -110,7 +126,7 @@ Scheduler.prototype.run = function() {
     }
 
     // Attempt to synchronize drawing time with sound
-    if (this.nextNoteTime != this.lastDrawTime) {
+    if (this.nextNoteTime !== this.lastDrawTime) {
       this.lastDrawTime = this.nextNoteTime;
       this.stepSequencer.draw((this.currentNote + 7) % this.stepSequencer.sequenceLength);
     }
