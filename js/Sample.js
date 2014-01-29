@@ -76,4 +76,14 @@ Sample.prototype.play = function (time) {
   return this;
 }
 
+/**
+ * @method
+ * @param time {number} which point to stop the sample playback
+ * @return this
+ */
+Sample.prototype.stop = function(time) {
+  this.source.stop(time);
+  return this;
+}
+
 module.exports = Sample;

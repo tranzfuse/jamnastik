@@ -4,10 +4,11 @@ var Iterator = require('./Iterator');
 /**
  * @constructor
  */
-function StepSequencer(id, context, pubsub) {
+function StepSequencer(id, context, pubsub, scheduler) {
   this.id = id;
   this.context = context;
   this.pubsub = pubsub;
+  this.scheduler = scheduler;
   this.domEl = null;
   this.samples = null;
   this.rows = new Iterator();
@@ -26,8 +27,10 @@ StepSequencer.prototype.init = function(samples) {
   this.samples = samples;
   this.setDomEl(this.id);
   this._setupGrid();
-  //this._setupPads();
   this._handleEvents();
+
+  // begin the drawing loop
+  //requestAnimationFrame(this.step.bind(this));
   return this;
 }
 
@@ -76,41 +79,50 @@ StepSequencer.prototype._setupGrid = function() {
   return this;
 }
 
-StepSequencer.prototype.step = function() {
-  //this.pubsub.emit('stepsequencer:step:on');
-
-  if (!this.rows.hasNext()) {
-    // better way to handle this? basically an attempt to ensure the last row
-    // is updated when the sequence starts over.
-    this.rows.getPrevious().domEl.classList.remove(this.rowActiveClass);
-    this.rows.rewind();
-  }
-  if (this.rows.hasPrevious()) {
-    this.rows.getPrevious().domEl.classList.remove(this.rowActiveClass);
-  }
-  this.rows.current().domEl.classList.add(this.rowActiveClass);
-  this.rows.next();
-}
-
 /**
- * @method create pad instances for each drum machine pad, store in the StepSequencer pad property
- * @private
- * @return this
+ * @method step through each row of the sequencer, highlighting the active
+ * row by adding a css class to the row, but also removing the css class from the
+ * previous row
  */
-StepSequencer.prototype._setupPads = function() {
-  var padId, key, domEl;
+StepSequencer.prototype.step = function() {
+  this.scheduler.currentNote = this.scheduler.last8thNoteDrawn;
+  this.scheduler.currentTime = this.context.currentTime;
 
-  for (var i = 0; i < this.samples.length; i++) {
-    padId = 'pad' + (i + 1);
-    key = this._setPadKeyCode(padId);
-    domEl = document.getElementById(padId);
-    this.pads[padId] = new Pad(padId, this.samples[i], key, domEl);
+  while (this.scheduler.notesInQueue.length && this.scheduler.notesInQueue[0].time < this.scheduler.currentTime) {
+    this.scheduler.currentNote = this.scheduler.notesInQueue[0].note;
+    this.scheduler.notesInQueue.splice(0,1);   // remove note from queue
   }
-  return this;
+
+  // We only need to draw if the note has moved.
+  if (this.scheduler.last8thNoteDrawn !== this.scheduler.currentNote) {
+    if (!this.rows.hasNext()) {
+      // better way to handle wrapping? basically an attempt to ensure the last row
+      // is updated when the sequence starts over.
+      this.rows.getPrevious().domEl.classList.remove(this.rowActiveClass);
+      this.rows.rewind();
+    }
+    if (this.rows.hasPrevious()) {
+      this.rows.getPrevious().domEl.classList.remove(this.rowActiveClass);
+    }
+    this.rows.current().domEl.classList.add(this.rowActiveClass);
+    this.rows.next();
+
+    this.scheduler.last8thNoteDrawn = this.scheduler.currentNote;
+  }
+
+  requestAnimationFrame(this.step.bind(this));
+}
+
+
+StepSequencer.prototype.draw = function(rowindex) {
+  var previousIndex = (rowindex + 7) % 8;
+
+  this.rows.getByIndex(previousIndex).domEl.classList.remove(this.rowActiveClass);
+  this.rows.getByIndex(rowindex).domEl.classList.add(this.rowActiveClass);
 }
 
 /**
- * @method bind listeners to events
+ * @method subscribe and bind listeners to events
  * @private
  */
 StepSequencer.prototype._handleEvents = function() {
@@ -126,75 +138,20 @@ StepSequencer.prototype._handleEvents = function() {
 
   //click
   this.domEl.addEventListener('click', function(e) {
-    console.log(self.pads[e.target.id]);
     if (e.target.id in self.pads) {
       self.pads[e.target.id].toggleEnabled();
     }
   }, false);
 }
 
-StepSequencer.prototype.play = function(time) {
-  var self = this;
-
-  this.step();
-  this.interval = setInterval(function() {
-    self.step();
-  }, time || 250);
+StepSequencer.prototype.play = function (time) {
+  this.scheduler.current8thNote = this.scheduler.current8thNote || 0;
+  this.scheduler.nextNoteTime = this.context.currentTime;
+  this.scheduler.run();    // kick off scheduling
 }
 
 StepSequencer.prototype.pause = function() {
-  if (this.interval) {
-    clearInterval(this.interval);
-  }
+  window.clearTimeout(this.scheduler.timerID);
 }
 
-/**
- * @method Set the drum pad's key property
- * @private
- * @param id {string} The drum pad's id
- * @return key
- */
-StepSequencer.prototype._setPadKeyCode = function(id) {
-  var key = getKeyCode(id);
-
-  if (false === key) {
-    throw new Error(e);
-  }
-
-  return key;
-}
-
-function getKeyCode(padId) {
-  var keyCodeMap = {
-    //row 1
-    pad1: 81, // q
-    pad2: 87, // w
-    pad3: 69, // e
-    pad4: 82, // r
-
-    // row 2
-    pad5: 65, // a
-    pad6: 83, // s
-    pad7: 68, // d
-    pad8: 70, // f
-
-    // row 3
-    pad9: 85, // u
-    pad10: 73, // i
-    pad11: 79, // o
-    pad12: 80, // p
-
-    // row 4
-    pad13: 72, // h
-    pad14: 74, // j
-    pad15: 75, // k
-    pad16: 76  // l
-  };
-
-  if (padId in keyCodeMap) {
-    return keyCodeMap[padId];
-  }
-
-  return false;
-}
 module.exports = StepSequencer;

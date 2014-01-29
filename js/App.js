@@ -1,6 +1,7 @@
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var sampleUrls = require('./sampleUrls');
+var Scheduler = require('./Scheduler');
 var StepSequencer = require('./StepSequencer');
 var Transport = require('./Transport');
 var GainControl = require('./GainControl');
@@ -8,6 +9,18 @@ var FilterControl = require('./FilterControl');
 var QControl = require('./QControl');
 var BufferLoader = require('./BufferLoader');
 var Sample = require('./Sample');
+
+// First, let's shim the requestAnimationFrame API, with a setTimeout fallback
+window.requestAnimationFrame = (function(){
+  return  window.requestAnimationFrame ||
+  window.webkitRequestAnimationFrame ||
+  window.mozRequestAnimationFrame ||
+  window.oRequestAnimationFrame ||
+  window.msRequestAnimationFrame ||
+  function(callback) {
+    window.setTimeout(callback, 1000 / 60);
+  };
+})();
 
 // Sort out the AudioContext
 window.AudioContext = window.AudioContext ||
@@ -23,6 +36,7 @@ function App() {
   this.context = null;
   this.bufferLoader = null;
   this.bufferList = null;
+  this.scheduler = null;
   this.stepSequencer = null;
   this.transport = null;
   this.gainControl = null;
@@ -44,7 +58,8 @@ App.prototype.init = function() {
     this.pubsub = new EventEmitter();
     this.pubsub.setMaxListeners(0);
     this.context = new AudioContext();
-    this.stepSequencer = new StepSequencer('step-sequencer', this.context, this.pubsub);
+    this.scheduler = new Scheduler(this.context, this.pubsub);
+    this.stepSequencer = new StepSequencer('step-sequencer', this.context, this.pubsub, this.scheduler);
     this.transport = new Transport('transport', 'play', 'pause', this.context, this.pubsub);
     this.gainControl = new GainControl('gain-control');
     this.filterControl = new FilterControl('filter-control', 'filter-toggle', 'lowpass', 440);
@@ -80,6 +95,7 @@ App.prototype.callbackLoaded = function(bufferList) {
 
   this.createSamples();
   this.stepSequencer.init(this.samples);
+  this.scheduler.init(this.samples, this.stepSequencer);
 }
 
 App.prototype.createSamples = function() {

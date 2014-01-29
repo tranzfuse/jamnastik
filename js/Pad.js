@@ -28,6 +28,7 @@ Pad.prototype.toggleEnabled = function() {
   } else {
     this.domEl.classList.remove(this.enabledClass);
   }
+  return this;
 }
 
 module.exports = Pad;

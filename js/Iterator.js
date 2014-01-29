@@ -54,4 +54,8 @@ Iterator.prototype.getNext = function() {
   }
 }
 
+Iterator.prototype.getByIndex = function(index) {
+  return this.data[index];
+}
+
 module.exports = Iterator;
