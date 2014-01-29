@@ -17,6 +17,7 @@ function StepSequencer(id, context, pubsub, scheduler) {
   this.gridCols = 8;
   this.gridRows = 8;
   this.rowActiveClass = 'active';
+  this.sequenceLength = 8;
 }
 
 /**
@@ -28,9 +29,6 @@ StepSequencer.prototype.init = function(samples) {
   this.setDomEl(this.id);
   this._setupGrid();
   this._handleEvents();
-
-  // begin the drawing loop
-  //requestAnimationFrame(this.step.bind(this));
   return this;
 }
 
@@ -79,46 +77,11 @@ StepSequencer.prototype._setupGrid = function() {
   return this;
 }
 
-/**
- * @method step through each row of the sequencer, highlighting the active
- * row by adding a css class to the row, but also removing the css class from the
- * previous row
- */
-StepSequencer.prototype.step = function() {
-  this.scheduler.currentNote = this.scheduler.last8thNoteDrawn;
-  this.scheduler.currentTime = this.context.currentTime;
-
-  while (this.scheduler.notesInQueue.length && this.scheduler.notesInQueue[0].time < this.scheduler.currentTime) {
-    this.scheduler.currentNote = this.scheduler.notesInQueue[0].note;
-    this.scheduler.notesInQueue.splice(0,1);   // remove note from queue
-  }
-
-  // We only need to draw if the note has moved.
-  if (this.scheduler.last8thNoteDrawn !== this.scheduler.currentNote) {
-    if (!this.rows.hasNext()) {
-      // better way to handle wrapping? basically an attempt to ensure the last row
-      // is updated when the sequence starts over.
-      this.rows.getPrevious().domEl.classList.remove(this.rowActiveClass);
-      this.rows.rewind();
-    }
-    if (this.rows.hasPrevious()) {
-      this.rows.getPrevious().domEl.classList.remove(this.rowActiveClass);
-    }
-    this.rows.current().domEl.classList.add(this.rowActiveClass);
-    this.rows.next();
-
-    this.scheduler.last8thNoteDrawn = this.scheduler.currentNote;
-  }
-
-  requestAnimationFrame(this.step.bind(this));
-}
-
-
 StepSequencer.prototype.draw = function(rowindex) {
   var previousIndex = (rowindex + 7) % 8;
 
-  this.rows.getByIndex(previousIndex).domEl.classList.remove(this.rowActiveClass);
   this.rows.getByIndex(rowindex).domEl.classList.add(this.rowActiveClass);
+  this.rows.getByIndex(previousIndex).domEl.classList.remove(this.rowActiveClass);
 }
 
 /**
@@ -145,8 +108,9 @@ StepSequencer.prototype._handleEvents = function() {
 }
 
 StepSequencer.prototype.play = function (time) {
-  this.scheduler.current8thNote = this.scheduler.current8thNote || 0;
-  this.scheduler.nextNoteTime = this.context.currentTime;
+  this.scheduler.currentNote = this.scheduler.currentNote || 0;
+  this.scheduler.startTime = this.context.currentTime + 0.005; // what's this 0.005 about?
+  this.scheduler.nextNoteTime = 0;
   this.scheduler.run();    // kick off scheduling
 }
 

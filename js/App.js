@@ -10,18 +10,6 @@ var QControl = require('./QControl');
 var BufferLoader = require('./BufferLoader');
 var Sample = require('./Sample');
 
-// First, let's shim the requestAnimationFrame API, with a setTimeout fallback
-window.requestAnimationFrame = (function(){
-  return  window.requestAnimationFrame ||
-  window.webkitRequestAnimationFrame ||
-  window.mozRequestAnimationFrame ||
-  window.oRequestAnimationFrame ||
-  window.msRequestAnimationFrame ||
-  function(callback) {
-    window.setTimeout(callback, 1000 / 60);
-  };
-})();
-
 // Sort out the AudioContext
 window.AudioContext = window.AudioContext ||
   window.webkitAudioContext ||
@@ -30,7 +18,7 @@ window.AudioContext = window.AudioContext ||
   window.msAudioContext;
 
 /**
- * @contructor
+ * @constructor
  */
 function App() {
   this.context = null;
@@ -95,9 +83,13 @@ App.prototype.callbackLoaded = function(bufferList) {
 
   this.createSamples();
   this.stepSequencer.init(this.samples);
-  this.scheduler.init(this.samples, this.stepSequencer);
+  this.scheduler.init(this.stepSequencer);
 }
 
+/**
+ * @method Errr, umm, create the sample instances
+ * @return this
+ */
 App.prototype.createSamples = function() {
   for (var i = 0; i < this.bufferList.length; i++) {
     this.samples[i] = new Sample(this.filterControl.node, this.gainControl.node, this.sampleUrls[i], this.bufferList[i]);

@@ -36,6 +36,15 @@ Transport.prototype.setPauseEl = function() {
   return this;
 }
 
+Transport.prototype.togglePlay = function() {
+  this.isPlaying = !this.isPlaying;
+  if (this.isPlaying) {
+    this.pubsub.emit('transport:play');
+  } else {
+    this.pubsub.emit('transport:pause');
+  }
+}
+
 /**
  * @method bind listeners to events
  * @private
@@ -49,21 +58,25 @@ Transport.prototype._handleEvents = function() {
     // play
     if (e.target.id === self.playId) {
       console.log('play clicked');
-      self.isPlaying = !self.isPlaying;
-      if (self.isPlaying) {
-        self.pubsub.emit('transport:play');
-      }
+      self.togglePlay();
     }
 
     // pause
     if (e.target.id === self.pauseId) {
       console.log('pause clicked');
-      self.isPlaying = !self.isPlaying;
-      if (!self.isPlaying) {
-        self.pubsub.emit('transport:pause');
-      }
+      self.togglePlay();
     }
   }, false);
+
+  //key
+  document.addEventListener('keydown', function(e) {
+
+    // space bar
+    if (e.keyCode === 32) {
+      self.togglePlay();
+    }
+
+  });
 }
 
 module.exports = Transport;
