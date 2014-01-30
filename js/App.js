@@ -1,7 +1,9 @@
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var sampleUrls = require('./sampleUrls');
-var DrumMachine = require('./DrumMachine');
+var Scheduler = require('./Scheduler');
+var StepSequencer = require('./StepSequencer');
+var Transport = require('./Transport');
 var GainControl = require('./GainControl');
 var FilterControl = require('./FilterControl');
 var QControl = require('./QControl');
@@ -16,13 +18,15 @@ window.AudioContext = window.AudioContext ||
   window.msAudioContext;
 
 /**
- * @contructor
+ * @constructor
  */
 function App() {
   this.context = null;
   this.bufferLoader = null;
   this.bufferList = null;
-  this.drumMachine = null;
+  this.scheduler = null;
+  this.stepSequencer = null;
+  this.transport = null;
   this.gainControl = null;
   this.filterControl = null;
   this.qControl = null;
@@ -40,11 +44,13 @@ App.prototype.init = function() {
 
   if (window.AudioContext) {
     this.pubsub = new EventEmitter();
-    this.pubsub.setMaxListeners(24);
+    this.pubsub.setMaxListeners(0);
     this.context = new AudioContext();
-    this.drumMachine = new DrumMachine('drum-machine');
+    this.scheduler = new Scheduler(this.context, this.pubsub);
+    this.stepSequencer = new StepSequencer('step-sequencer', this.context, this.pubsub, this.scheduler);
+    this.transport = new Transport('transport', 'play', 'pause', this.context, this.pubsub);
     this.gainControl = new GainControl('gain-control');
-    this.filterControl = new FilterControl('filter-control', 'filter-toggle', 'lowpass', 440);
+    this.filterControl = new FilterControl('filter-control', 'filter-toggle', 'lowpass', 440, this.context, this.pubsub);
     this.qControl = new QControl('q-control');
     this.sampleUrls = sampleUrls;
     this.bufferLoader = new BufferLoader(
@@ -72,16 +78,21 @@ App.prototype.callbackLoaded = function(bufferList) {
   // @TODO manage all the controls within a ControlPanel instance
   this.gainControl.init(this.context.createGain());
   this.filterControl.init(this.context.createBiquadFilter());
-  // q adjusts the Q value of the BiquadFilterNode instance created for the filterControl
   this.qControl.init(this.filterControl.node);
+  this.transport.init();
 
   this.createSamples();
-  this.drumMachine.init(this.samples);
+  this.stepSequencer.init(this.samples);
+  this.scheduler.init(this.stepSequencer);
 }
 
+/**
+ * @method Errr, umm, create the sample instances
+ * @return this
+ */
 App.prototype.createSamples = function() {
   for (var i = 0; i < this.bufferList.length; i++) {
-    this.samples[i] = new Sample(this.filterControl.node, this.gainControl.node, this.sampleUrls[i], this.bufferList[i]);
+    this.samples[i] = new Sample(this.context, this.pubsub, this.filterControl.node, this.gainControl.node, this.sampleUrls[i], this.bufferList[i]);
     this.samples[i].init(this.filterControl.isEnabled);
   }
   return this;

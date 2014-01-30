@@ -1,7 +1,7 @@
 #audiohack {
   @extend .cf;
   border: $audiohack-border-width solid $audiohack-border-color;
-  border-radius: 5px;
+  border-radius: $border-radius;
   margin: 2em auto;
   width: $audiohack-width;
 }

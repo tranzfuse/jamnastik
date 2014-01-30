@@ -1,7 +1,7 @@
 /**
  * @constructor
  */
-function FilterControl(id, toggleId, type, cutoff) {
+function FilterControl(id, toggleId, type, cutoff, context, pubsub) {
   this.id = id;
   this.toggleId = toggleId;
   this.domEl = null;
@@ -10,6 +10,8 @@ function FilterControl(id, toggleId, type, cutoff) {
   this.type = type;
   this.cutoffFrequency = cutoff;
   this.isEnabled = false;
+  this.context = context;
+  this.pubsub = pubsub;
 }
 
 /**
@@ -36,7 +38,7 @@ FilterControl.prototype.init = function(node) {
  */
 FilterControl.prototype._setFilterType = function(type) {
   if (this.node === null) {
-    throw new TypeError('FilterControl.node is not defined', 'FilterControl');
+    throw new ReferenceError('FilterControl.node is not defined', 'FilterControl');
   }
   this.node.type = type || 'lowpass';
   return this;
@@ -49,7 +51,7 @@ FilterControl.prototype._setFilterType = function(type) {
  */
 FilterControl.prototype._setCutoffFrequency = function(frequency) {
   if (this.node === null) {
-    throw new TypeError('FilterControl.node is not defined', 'FilterControl');
+    throw new ReferenceError('FilterControl.node is not defined', 'FilterControl');
   }
   this.node.frequency.value = frequency || 440;
 }
@@ -92,7 +94,7 @@ FilterControl.prototype.changeFilter = function(element) {
   // Clamp the frequency between the minimum value (40 Hz) and half of the
   // sampling rate.
   var minValue = 40;
-  var maxValue = app.context.sampleRate / 2;
+  var maxValue = this.context.sampleRate / 2;
   // Logarithm (base 2) to compute how many octaves fall in the range.
   var numberOfOctaves = Math.log(maxValue / minValue) / Math.LN2;
   // Compute a multiplier from 0 to 1 based on an exponential scale.
@@ -116,7 +118,7 @@ FilterControl.prototype._handleEvents = function() {
 
   this.toggleEl.addEventListener('click', function(e) {
     self.isEnabled = self.toggleEl.checked;
-    app.pubsub.emit('filter:enabled:' + self.isEnabled);
+    self.pubsub.emit('filter:enabled:' + self.isEnabled);
   }, false);
 }
 

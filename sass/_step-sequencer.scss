@@ -1,0 +1,17 @@
+#step-sequencer {
+  @extend .cf;
+  border: none;
+  float: right;
+  padding: $step-sequencer-padding;
+  width: $step-sequencer-width;
+}
+
+.step-row {
+  @extend .cf;
+}
+
+.step-row:last-child {
+  .col {
+    margin-bottom: 0;
+  }
+}
