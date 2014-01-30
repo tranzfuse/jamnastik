@@ -1,7 +1,9 @@
 /**
  * @constructor
  */
-function Sample (filterNode, gainNode, url, buffer) {
+function Sample (context, pubsub, filterNode, gainNode, url, buffer) {
+  this.context = context;
+  this.pubsub = pubsub;
   this.filterNode = filterNode;
   this.gainNode = gainNode;
 	this.url = url;
@@ -20,11 +22,11 @@ Sample.prototype.init = function(isEnabled) {
 
   this.setFilterEnabled(isEnabled);
 
-  app.pubsub.on('filter:enabled:true', function() {
+  this.pubsub.on('filter:enabled:true', function() {
     self.setFilterEnabled(true);
   });
 
-  app.pubsub.on('filter:enabled:false', function() {
+  this.pubsub.on('filter:enabled:false', function() {
     self.setFilterEnabled(false);
   });
 
@@ -50,7 +52,7 @@ Sample.prototype.play = function (time) {
   time = time || 0;
 
   // create sample's sound source
-  this.source = app.context.createBufferSource();
+  this.source = this.context.createBufferSource();
 
   // tell source which sound to play
   this.source.buffer = this.buffer;

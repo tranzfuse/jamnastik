@@ -118,10 +118,12 @@ Scheduler.prototype.run = function() {
   // while there are notes that will need to play before the next interval,
   // schedule them and advance the pointer.
   while (this.nextNoteTime < this.currentTime + this.scheduleAheadTime) {
+    // Convert noteTime to context time.
+    var contextPlayTime = this.nextNoteTime + this.startTime;
 
     for (var i = 0; i < activeRowSamples.length; i++) {
       (function(x) {
-        activeRowSamples[x].play(self.nextNoteTime);
+        activeRowSamples[x].play(contextPlayTime);
       }(i));
     }
 

@@ -50,7 +50,7 @@ App.prototype.init = function() {
     this.stepSequencer = new StepSequencer('step-sequencer', this.context, this.pubsub, this.scheduler);
     this.transport = new Transport('transport', 'play', 'pause', this.context, this.pubsub);
     this.gainControl = new GainControl('gain-control');
-    this.filterControl = new FilterControl('filter-control', 'filter-toggle', 'lowpass', 440);
+    this.filterControl = new FilterControl('filter-control', 'filter-toggle', 'lowpass', 440, this.context, this.pubsub);
     this.qControl = new QControl('q-control');
     this.sampleUrls = sampleUrls;
     this.bufferLoader = new BufferLoader(
@@ -92,7 +92,7 @@ App.prototype.callbackLoaded = function(bufferList) {
  */
 App.prototype.createSamples = function() {
   for (var i = 0; i < this.bufferList.length; i++) {
-    this.samples[i] = new Sample(this.filterControl.node, this.gainControl.node, this.sampleUrls[i], this.bufferList[i]);
+    this.samples[i] = new Sample(this.context, this.pubsub, this.filterControl.node, this.gainControl.node, this.sampleUrls[i], this.bufferList[i]);
     this.samples[i].init(this.filterControl.isEnabled);
   }
   return this;

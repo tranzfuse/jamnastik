@@ -70,12 +70,10 @@ Transport.prototype._handleEvents = function() {
 
   //key
   document.addEventListener('keydown', function(e) {
-
     // space bar
     if (e.keyCode === 32) {
       self.togglePlay();
     }
-
   });
 }
 
