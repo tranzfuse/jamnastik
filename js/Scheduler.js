@@ -2,7 +2,7 @@
  * Great read here:
  * http://www.html5rocks.com/en/tutorials/audio/scheduling/
  *
- * Stolen and mangled with pride from:
+ * Borrowed (and mangled) ideas with gratitude from:
  * https://github.com/cwilso/metronome/blob/master/js/metronome.js
  *
  * Also borrowed some ideas from this one:
@@ -135,6 +135,7 @@ Scheduler.prototype.run = function() {
 
     this.nextNote();
   }
+
   this.timerID = window.setTimeout(this.run.bind(this), this.lookahead);
 }
 

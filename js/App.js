@@ -21,6 +21,7 @@ window.AudioContext = window.AudioContext ||
  * @constructor
  */
 function App() {
+  this.socket = null;
   this.context = null;
   this.bufferLoader = null;
   this.bufferList = null;
@@ -43,15 +44,16 @@ App.prototype.init = function() {
     callback = this.callbackLoaded.bind(this);
 
   if (window.AudioContext) {
+    this.socket = io.connect('http://localhost');
     this.pubsub = new EventEmitter();
     this.pubsub.setMaxListeners(0);
     this.context = new AudioContext();
     this.scheduler = new Scheduler(this.context, this.pubsub);
-    this.stepSequencer = new StepSequencer('step-sequencer', this.context, this.pubsub, this.scheduler);
+    this.stepSequencer = new StepSequencer('step-sequencer', this.context, this.pubsub, this.scheduler, this.socket);
     this.transport = new Transport('transport', 'play', 'pause', this.context, this.pubsub);
-    this.gainControl = new GainControl('gain-control');
-    this.filterControl = new FilterControl('filter-control', 'filter-toggle', 'lowpass', 440, this.context, this.pubsub);
-    this.qControl = new QControl('q-control');
+    this.gainControl = new GainControl('gain-control', this.socket, this.pubsub);
+    this.filterControl = new FilterControl('filter-control', 'filter-toggle', 'lowpass', 440, this.context, this.pubsub, this.socket);
+    this.qControl = new QControl('q-control', this.socket);
     this.sampleUrls = sampleUrls;
     this.bufferLoader = new BufferLoader(
       this.context,
@@ -84,6 +86,16 @@ App.prototype.callbackLoaded = function(bufferList) {
   this.createSamples();
   this.stepSequencer.init(this.samples);
   this.scheduler.init(this.stepSequencer);
+  this._handleIO();
+}
+
+/**
+ * @method handle websockets events
+ */
+App.prototype._handleIO = function() {
+  var self = this;
+
+  this.socket.emit('app:loaded');
 }
 
 /**
