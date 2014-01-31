@@ -1,8 +1,10 @@
 /**
  * @constructor
  */
-function GainControl(id) {
+function GainControl(id, socket, pubsub) {
   this.id = id;
+  this.socket = socket;
+  this.pubsub = pubsub;
   this.domEl = null;
   this.node = null;
 }
@@ -16,6 +18,7 @@ GainControl.prototype.init = function(node) {
   this.setDomEl(this.id);
   this._setNode(node);
   this._handleEvents();
+  this._handleIO();
   return this;
 }
 
@@ -38,7 +41,7 @@ GainControl.prototype._setNode = function(node) {
   return this;
 }
 
-// Again, stolen with pride from:
+// Again, borrowed with gratitude from:
 // http://www.html5rocks.com/en/tutorials/webaudio/intro/js/volume-sample.js
 GainControl.prototype.changeGain = function(element) {
   var volume = element.value;
@@ -59,6 +62,23 @@ GainControl.prototype._handleEvents = function() {
   this.domEl.addEventListener('input', function(e) {
     self.changeGain(e.target);
   }, false);
+}
+
+/**
+ * @method handle websockets events
+ */
+GainControl.prototype._handleIO = function() {
+  var self = this,
+    gainKnob = document.getElementById('gain-knob');
+
+  this.socket.emit('control:gain:loaded');
+
+  this.socket.on('j5:potGain:read', function(data) {
+    self.domEl.value = data.calculated;
+    self.changeGain(self.domEl);
+
+    gainKnob.style.webkitTransform = 'rotate(' + Math.floor(data.knob) + 'deg)';
+  });
 }
 
 module.exports = GainControl;

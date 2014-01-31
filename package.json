@@ -1,8 +1,8 @@
 {
   "name": "webaudioapi",
   "version": "0.0.0",
-  "description": "A complete and utter hack.",
-  "main": "main.js",
+  "description": "A hack week project to learn about the web audio api and arduino.",
+  "main": "bundle.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -17,5 +17,11 @@
     "grunt-browserify": "~1.3.0",
     "grunt-contrib-sass": "~0.6.0",
     "grunt-contrib-watch": "~0.5.3"
+  },
+  "dependencies": {
+    "express": "~3.4.8",
+    "http": "0.0.0",
+    "socket.io": "~0.9.16",
+    "johnny-five": "~0.7.15"
   }
 }

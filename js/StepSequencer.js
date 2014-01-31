@@ -4,11 +4,12 @@ var Iterator = require('./Iterator');
 /**
  * @constructor
  */
-function StepSequencer(id, context, pubsub, scheduler) {
+function StepSequencer(id, context, pubsub, scheduler, socket) {
   this.id = id;
   this.context = context;
   this.pubsub = pubsub;
   this.scheduler = scheduler;
+  this.socket = socket;
   this.domEl = null;
   this.samples = null;
   this.rows = new Iterator();
@@ -29,6 +30,7 @@ StepSequencer.prototype.init = function(samples) {
   this.setDomEl(this.id);
   this._setupGrid();
   this._handleEvents();
+  //this._handleIO();
   return this;
 }
 
@@ -82,6 +84,28 @@ StepSequencer.prototype.draw = function(rowIndex) {
 
   this.rows.getByIndex(rowIndex).domEl.classList.add(this.rowActiveClass);
   this.rows.getByIndex(previousIndex).domEl.classList.remove(this.rowActiveClass);
+}
+
+StepSequencer.prototype._handleIO = function() {
+  var self = this;
+
+  this.socket.emit('stepsequencer:loaded');
+
+  this.socket.on('j5:ready', function() {
+    console.log('j5:ready');
+  });
+
+  /*
+  this.socket.on('j5:button1:down', function() {
+    console.log('j5:button1:down');
+    self.pads['step-row1_col1'].toggleEnabled();
+  });
+
+  this.socket.on('j5:button2:down', function() {
+    console.log('j5:button2:down');
+    self.pads['step-row1_col2'].toggleEnabled();
+  });
+  */
 }
 
 /**

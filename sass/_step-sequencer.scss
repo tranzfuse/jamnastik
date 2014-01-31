@@ -1,6 +1,8 @@
 #step-sequencer {
   @extend .cf;
+  background-color: $step-sequencer-bg-color;
   border: none;
+  border-radius: $border-radius;
   float: right;
   padding: $step-sequencer-padding;
   width: $step-sequencer-width;

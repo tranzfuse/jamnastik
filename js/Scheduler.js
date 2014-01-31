@@ -2,7 +2,7 @@
  * Great read here:
  * http://www.html5rocks.com/en/tutorials/audio/scheduling/
  *
- * Stolen and mangled with pride from:
+ * Borrowed (and mangled) ideas with gratitude from:
  * https://github.com/cwilso/metronome/blob/master/js/metronome.js
  *
  * Also borrowed some ideas from this one:
@@ -70,6 +70,7 @@ function Scheduler(context, pubsub) {
  */
 Scheduler.prototype.init = function(stepSequencer) {
   this.stepSequencer = stepSequencer;
+  this._handleEvents();
   return this;
 }
 
@@ -135,7 +136,16 @@ Scheduler.prototype.run = function() {
 
     this.nextNote();
   }
+
   this.timerID = window.setTimeout(this.run.bind(this), this.lookahead);
+}
+
+Scheduler.prototype._handleEvents = function() {
+  var self = this;
+
+  this.pubsub.on('tempo:set', function(data) {
+    self.tempo = data.tempo;
+  });
 }
 
 module.exports = Scheduler;

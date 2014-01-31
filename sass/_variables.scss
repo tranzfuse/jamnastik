@@ -6,7 +6,7 @@ $body-bg: #fff;
 $text-color: #999;
 
 // Typography
-$font-family: helvetica, arial, sans-serif;
+$font-family: 'Exo 2', verdana, sans-serif;
 
 $border-width: .25em / 4;
 $border-color: #999;
@@ -22,12 +22,13 @@ $knob-border-radius: 500px; //turns a box into a circle
 $knob-border-width: $border-width;
 $knob-width: 3em;
 $knob-height: 3em;
-$knobs-per-group: 3;
+$knobs-per-group: 2;
 
 // Control
 $control-margin: 1em;
 
 // Controls
+$controls-bg-color: #fff;
 $controls-border-width: $border-width;
 $controls-border-color: $border-color;
 $controls-padding: 1em;
@@ -50,6 +51,7 @@ $pad-enabled-bg-color: #0099cc;
 $pad-active-bg-color: #eee;
 
 // Step Sequencer
+$step-sequencer-bg-color: #fff;
 $step-sequencer-border-color: $border-color;
 $step-sequencer-border-width: $border-width;
 $step-sequencer-padding: 2em;

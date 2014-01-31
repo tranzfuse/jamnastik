@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>webaudioapihack</title>
+  <link href='http://fonts.googleapis.com/css?family=Exo+2:400,100' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" media="all" href="/css/style.css">
+</head>
+<body>
+  <div id="audiohack">
+    <div id="step-sequencer"></div>
+  </div>
+
+  <div id="control-panel">
+    <div class="controls">
+
+      <div class="is-hidden">
+        <h3>Filter</h3>
+        <div class="control-group">
+          <label for="filter-control">Low pass</label>
+          <input type="range" value="1" min="0" max="1" step="0.01" id="filter-control">
+
+          <label for="q-control">Q</label>
+          <input type="range" value="1" min="0" max="1" step="0.01" id="q-control">
+        </div>
+      </div>
+
+      <h3>Filter <input type="checkbox" id="filter-toggle"></h3>
+      <div class="control-group">
+
+        <div class="control-inline">
+          <div class="knob" id="filter-knob"></div>
+          <h4 class="control-label">Lo-pass</h4>
+        </div>
+
+        <div class="control-inline">
+          <div class="knob" id="q-knob"></div>
+          <h4 class="control-label">Q</h4>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="controls">
+      <div class="control-group">
+
+        <div class="control-inline">
+          <div class="knob" id="gain-knob"></div>
+          <h4 class="control-label">Gain</h4>
+        </div>
+
+        <input type="range" value="100" min="0" max="100" step="0.1" id="gain-control" class="is-hidden">
+      </div>
+    </div>
+
+    <div class="controls" id="transport">
+      <div class="control-group">
+        <div class="glyphicon glyphicon-pause" id="pause"></div>
+        <div class="glyphicon glyphicon-play" id="play"></div>
+      </div>
+    </div>
+
+    <div class="controls" id="tempo">
+      <div class="control-group">
+        <div class="glyphicon glyphicon-minus" id="tempo-decrease"></div>
+        <div class="glyphicon glyphicon-plus" id="tempo-increase"></div>
+        <span><span id="bpm">120</span> BPM</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!--Provided client-side implementation of socket.io npm -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/bundle.js"></script>
+
+</body>
+</html>

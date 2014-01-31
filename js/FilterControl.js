@@ -1,7 +1,7 @@
 /**
  * @constructor
  */
-function FilterControl(id, toggleId, type, cutoff, context, pubsub) {
+function FilterControl(id, toggleId, type, cutoff, context, pubsub, socket) {
   this.id = id;
   this.toggleId = toggleId;
   this.domEl = null;
@@ -12,6 +12,7 @@ function FilterControl(id, toggleId, type, cutoff, context, pubsub) {
   this.isEnabled = false;
   this.context = context;
   this.pubsub = pubsub;
+  this.socket = socket;
 }
 
 /**
@@ -27,6 +28,7 @@ FilterControl.prototype.init = function(node) {
   this._setFilterType(this.type);
   this._setCutoffFrequency(this.cutoffFrequency);
   this._handleEvents();
+  this._handleIO();
   return this;
 }
 
@@ -88,7 +90,7 @@ FilterControl.prototype._setNode = function(node) {
   return this;
 }
 
-// Again, stolen with pride from:
+// Again, borrowed with gratitude from:
 // http://www.html5rocks.com/en/tutorials/webaudio/intro/js/filter-sample.js
 FilterControl.prototype.changeFilter = function(element) {
   // Clamp the frequency between the minimum value (40 Hz) and half of the
@@ -120,6 +122,30 @@ FilterControl.prototype._handleEvents = function() {
     self.isEnabled = self.toggleEl.checked;
     self.pubsub.emit('filter:enabled:' + self.isEnabled);
   }, false);
+}
+
+/**
+ * @method handle websockets events
+ */
+FilterControl.prototype._handleIO = function() {
+  var self = this,
+    filterKnob = document.getElementById('filter-knob');
+
+  this.socket.emit('control:filter:loaded');
+
+  this.socket.on('j5:button1:down', function() {
+    //console.log('j5:button1:down');
+    self.isEnabled = !self.isEnabled;
+    self.toggleEl.checked = self.isEnabled;
+    self.pubsub.emit('filter:enabled:' + self.isEnabled);
+  });
+
+  this.socket.on('j5:potFilter:read', function(data) {
+    self.domEl.value = data.calculated;
+    self.changeFilter(self.domEl);
+
+    filterKnob.style.webkitTransform = 'rotate(' + Math.floor(data.knob) + 'deg)';
+  });
 }
 
 module.exports = FilterControl;
