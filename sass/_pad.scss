@@ -1,14 +1,13 @@
 .pad {
-  background-color: #fff;
+  background-color: $pad-bg-color;
   border: $pad-border-width solid $pad-border-color;
   float: left;
   height: $pad-height;
   margin: 0 $pad-margin $pad-margin 0;
-  //transition: background-color .1s ease-in;
   width: $pad-width;
 
   &:hover {
-    background-color: lighten($pad-enabled-bg-color, 50%);
+    background-color: $pad-hover-bg-color;
   }
 
   &.enabled {
@@ -26,7 +25,7 @@
     background-color: $pad-active-bg-color;
 
     &.enabled {
-      background-color: darken($pad-enabled-bg-color, 10%);
+      background-color: $pad-enabled-active-bg-color;
     }
   }
 }

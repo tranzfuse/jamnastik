@@ -10,7 +10,7 @@
  *
  * @constructor
  */
-function Scheduler(context, pubsub) {
+function Scheduler(context, pubsub, tempo) {
   this.context = context;
   this.pubsub = pubsub;
   this.stepSequencer = null;
@@ -33,7 +33,7 @@ function Scheduler(context, pubsub) {
   /**
    * tempo (in beats per minute)
    */
-  this.tempo = 120.0;
+  this.tempo = tempo;
 
   /**
    * How frequently to call scheduling function

@@ -10,6 +10,7 @@ var QControl = require('./QControl');
 var BufferLoader = require('./BufferLoader');
 var Sample = require('./Sample');
 var Tempo = require('./Tempo');
+var ControlPanel = require('./ControlPanel');
 
 // Sort out the AudioContext
 window.AudioContext = window.AudioContext ||
@@ -35,6 +36,7 @@ function App() {
   this.sampleUrls = null;
   this.samples = [];
   this.tempo = null;
+  this.controlPanel = null;
 }
 
 /**
@@ -50,13 +52,14 @@ App.prototype.init = function() {
     this.pubsub = new EventEmitter();
     this.pubsub.setMaxListeners(0);
     this.context = new AudioContext();
-    this.scheduler = new Scheduler(this.context, this.pubsub);
+    this.tempo = new Tempo('tempo', this.pubsub);
+    this.controlPanel = new ControlPanel('control-panel', 'control-panel-title', this.pubsub);
+    this.scheduler = new Scheduler(this.context, this.pubsub, this.tempo.tempo);
     this.stepSequencer = new StepSequencer('step-sequencer', this.context, this.pubsub, this.scheduler, this.socket);
     this.transport = new Transport('transport', 'play', 'pause', this.context, this.pubsub);
     this.gainControl = new GainControl('gain-control', this.socket, this.pubsub);
     this.filterControl = new FilterControl('filter-control', 'filter-toggle', 'lowpass', 440, this.context, this.pubsub, this.socket);
     this.qControl = new QControl('q-control', this.socket);
-    this.tempo = new Tempo('tempo', this.pubsub);
     this.sampleUrls = sampleUrls;
     this.bufferLoader = new BufferLoader(
       this.context,
@@ -81,6 +84,7 @@ App.prototype.callbackLoaded = function(bufferList) {
   this.setBufferList(bufferList);
 
   // @TODO manage all the controls within a ControlPanel instance
+  this.controlPanel.init();
   this.gainControl.init(this.context.createGain());
   this.filterControl.init(this.context.createBiquadFilter());
   this.qControl.init(this.filterControl.node);
