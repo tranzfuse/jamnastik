@@ -19,6 +19,12 @@
 .glyphicon:empty {
   width: 1em;
 }
+.glyphicon-plus:before {
+  content: "\2b";
+}
+.glyphicon-minus:before {
+  content: "\2212";
+}
 .glyphicon-volume-off:before {
   content: "\e036";
 }

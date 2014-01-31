@@ -1,4 +1,5 @@
 .controls {
+  background-color: $controls-bg-color;
   border: $controls-border-width solid $controls-border-color;
   border-left: 0;
   border-radius: 0 $border-radius $border-radius 0;
@@ -21,4 +22,8 @@
   &:last-child {
     margin-right: 0;
   }
+}
+
+.control-label {
+  @extend .center;
 }

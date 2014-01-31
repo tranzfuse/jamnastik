@@ -65,14 +65,16 @@ QControl.prototype._handleEvents = function() {
  * @method handle websockets events
  */
 QControl.prototype._handleIO = function() {
-  var self = this;
+  var self = this,
+    qKnob = document.getElementById('q-knob');
 
   this.socket.emit('control:q:loaded');
 
   this.socket.on('j5:potQ:read', function(data) {
-    //console.log('j5:potQ:read');
     self.domEl.value = data.calculated;
     self.changeQ(self.domEl);
+
+    qKnob.style.webkitTransform = 'rotate(' + Math.floor(data.knob) + 'deg)';
   });
 }
 

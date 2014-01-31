@@ -128,7 +128,8 @@ FilterControl.prototype._handleEvents = function() {
  * @method handle websockets events
  */
 FilterControl.prototype._handleIO = function() {
-  var self = this;
+  var self = this,
+    filterKnob = document.getElementById('filter-knob');
 
   this.socket.emit('control:filter:loaded');
 
@@ -140,9 +141,10 @@ FilterControl.prototype._handleIO = function() {
   });
 
   this.socket.on('j5:potFilter:read', function(data) {
-    //console.log('j5:potFilter:read');
     self.domEl.value = data.calculated;
     self.changeFilter(self.domEl);
+
+    filterKnob.style.webkitTransform = 'rotate(' + Math.floor(data.knob) + 'deg)';
   });
 }
 

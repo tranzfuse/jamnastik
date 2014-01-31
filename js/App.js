@@ -9,6 +9,7 @@ var FilterControl = require('./FilterControl');
 var QControl = require('./QControl');
 var BufferLoader = require('./BufferLoader');
 var Sample = require('./Sample');
+var Tempo = require('./Tempo');
 
 // Sort out the AudioContext
 window.AudioContext = window.AudioContext ||
@@ -33,6 +34,7 @@ function App() {
   this.qControl = null;
   this.sampleUrls = null;
   this.samples = [];
+  this.tempo = null;
 }
 
 /**
@@ -54,6 +56,7 @@ App.prototype.init = function() {
     this.gainControl = new GainControl('gain-control', this.socket, this.pubsub);
     this.filterControl = new FilterControl('filter-control', 'filter-toggle', 'lowpass', 440, this.context, this.pubsub, this.socket);
     this.qControl = new QControl('q-control', this.socket);
+    this.tempo = new Tempo('tempo', this.pubsub);
     this.sampleUrls = sampleUrls;
     this.bufferLoader = new BufferLoader(
       this.context,
@@ -82,6 +85,7 @@ App.prototype.callbackLoaded = function(bufferList) {
   this.filterControl.init(this.context.createBiquadFilter());
   this.qControl.init(this.filterControl.node);
   this.transport.init();
+  this.tempo.init();
 
   this.createSamples();
   this.stepSequencer.init(this.samples);

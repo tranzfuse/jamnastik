@@ -70,6 +70,7 @@ function Scheduler(context, pubsub) {
  */
 Scheduler.prototype.init = function(stepSequencer) {
   this.stepSequencer = stepSequencer;
+  this._handleEvents();
   return this;
 }
 
@@ -137,6 +138,14 @@ Scheduler.prototype.run = function() {
   }
 
   this.timerID = window.setTimeout(this.run.bind(this), this.lookahead);
+}
+
+Scheduler.prototype._handleEvents = function() {
+  var self = this;
+
+  this.pubsub.on('tempo:set', function(data) {
+    self.tempo = data.tempo;
+  });
 }
 
 module.exports = Scheduler;

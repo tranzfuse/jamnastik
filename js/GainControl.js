@@ -68,14 +68,16 @@ GainControl.prototype._handleEvents = function() {
  * @method handle websockets events
  */
 GainControl.prototype._handleIO = function() {
-  var self = this;
+  var self = this,
+    gainKnob = document.getElementById('gain-knob');
 
   this.socket.emit('control:gain:loaded');
 
   this.socket.on('j5:potGain:read', function(data) {
-    console.log('j5:potGain:read');
     self.domEl.value = data.calculated;
     self.changeGain(self.domEl);
+
+    gainKnob.style.webkitTransform = 'rotate(' + Math.floor(data.knob) + 'deg)';
   });
 }
 
