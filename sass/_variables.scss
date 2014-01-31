@@ -3,10 +3,13 @@
 
 // Scaffolding
 $body-bg: #fff;
+$bg-color-base: #999;
 $text-color: #999;
 
 // Typography
 $font-family: 'Exo 2', verdana, sans-serif;
+$font-weight: 100;
+
 
 $border-width: .25em / 4;
 $border-color: #999;
@@ -34,11 +37,13 @@ $controls-border-color: $border-color;
 $controls-padding: 1em;
 
 // Control Panel
+$control-panel-bg-color: $bg-color-base;
 $control-panel-border-color: $border-color;
 $control-panel-border-width: $border-width;
-$control-panel-margin: 2em;
+$control-panel-margin: 1em;
 $control-panel-padding: 1em;
 $control-panel-width: ($knob-width + $control-margin) * $knobs-per-group + $control-panel-padding * 2 - $control-margin + ($control-panel-border-width * 2);
+$control-panel-closed-width: -10.75em;
 
 // Pad
 $pads-per-row: 8;
@@ -47,8 +52,11 @@ $pad-border-width: $border-width;
 $pad-margin: 1em;
 $pad-width: 4em;
 $pad-height: 4em;
-$pad-enabled-bg-color: #0099cc;
-$pad-active-bg-color: #eee;
+$pad-bg-color: #fff;
+$pad-enabled-bg-color: #648F00; // #0099cc;
+$pad-active-bg-color: #84BD00; //#eee;
+$pad-hover-bg-color: lighten($pad-enabled-bg-color, 50%);
+$pad-enabled-active-bg-color: darken($pad-enabled-bg-color, 10%);
 
 // Step Sequencer
 $step-sequencer-bg-color: #fff;
