@@ -4,12 +4,13 @@ var Iterator = require('./Iterator');
 /**
  * @constructor
  */
-function StepSequencer(id, context, pubsub, scheduler, socket) {
+function StepSequencer(id, context, pubsub, scheduler, socket, hasTouchSupport) {
   this.id = id;
   this.context = context;
   this.pubsub = pubsub;
   this.scheduler = scheduler;
   this.socket = socket;
+  this.hasTouchSupport = hasTouchSupport;
   this.domEl = null;
   this.samples = null;
   this.rows = new Iterator();

@@ -37,6 +37,7 @@ function App() {
   this.samples = [];
   this.tempo = null;
   this.controlPanel = null;
+  this.hasTouchSupport = null;
 }
 
 /**
@@ -48,6 +49,9 @@ App.prototype.init = function() {
     callback = this.callbackLoaded.bind(this);
 
   if (window.AudioContext) {
+    this.hasTouchSupport = (function() {
+      return 'ontouchstart' in window;
+    }());
     this.socket = io.connect('http://localhost');
     this.pubsub = new EventEmitter();
     this.pubsub.setMaxListeners(0);
@@ -55,7 +59,7 @@ App.prototype.init = function() {
     this.tempo = new Tempo('tempo', this.pubsub);
     this.controlPanel = new ControlPanel('control-panel', 'control-panel-title', this.pubsub);
     this.scheduler = new Scheduler(this.context, this.pubsub, this.tempo.tempo);
-    this.stepSequencer = new StepSequencer('step-sequencer', this.context, this.pubsub, this.scheduler, this.socket);
+    this.stepSequencer = new StepSequencer('step-sequencer', this.context, this.pubsub, this.scheduler, this.socket, this.hasTouchSupport);
     this.transport = new Transport('transport', 'play', 'pause', this.context, this.pubsub);
     this.gainControl = new GainControl('gain-control', this.socket, this.pubsub);
     this.filterControl = new FilterControl('filter-control', 'filter-toggle', 'lowpass', 440, this.context, this.pubsub, this.socket);
