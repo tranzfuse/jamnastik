@@ -65,7 +65,7 @@ function Scheduler(context, pubsub, tempo) {
 }
 
 /**
- * @method setup the instance
+ * Setup the instance
  * @return this
  */
 Scheduler.prototype.init = function(stepSequencer) {
@@ -75,7 +75,7 @@ Scheduler.prototype.init = function(stepSequencer) {
 }
 
 /**
- * @method increment currentNote and advance nextNoteTime
+ * Increment currentNote and advance nextNoteTime
  */
 Scheduler.prototype.nextNote = function() {
   // Advance current note and time by a 16th note...
@@ -93,7 +93,7 @@ Scheduler.prototype.nextNote = function() {
 }
 
 /**
- * @method the "loop" to "schedule" notes to be played.
+ * The "loop" to "schedule" notes to be played.
  * Also tries to sync drawing time with sound playback.
  * Is triggered when play button is pressed, recurses while step sequencer is playing.
  */
@@ -140,6 +140,9 @@ Scheduler.prototype.run = function() {
   this.timerID = window.setTimeout(this.run.bind(this), this.lookahead);
 }
 
+/**
+ * subscribe to and bind event listeners
+ */
 Scheduler.prototype._handleEvents = function() {
   var self = this;
 

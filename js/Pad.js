@@ -12,7 +12,6 @@ function Pad(id, sample, key, domEl) {
 
 /**
  * Bind event listeners for events we're interested in.
- * @method
  * @param when {number} Where to begin playback
  * @return this
  */
@@ -21,6 +20,10 @@ Pad.prototype.press = function(when) {
   return this;
 }
 
+/**
+ * Toggle the enabled css class on the pad dom element
+ * @return this
+ */
 Pad.prototype.toggleEnabled = function() {
   this.enabled = !this.enabled;
   if (this.enabled) {

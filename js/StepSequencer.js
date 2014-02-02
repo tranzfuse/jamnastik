@@ -22,7 +22,7 @@ function StepSequencer(id, context, pubsub, scheduler, socket) {
 }
 
 /**
- * @method Setup the StepSequencer instance
+ * Setup the StepSequencer instance
  * @return this
  */
 StepSequencer.prototype.init = function(samples) {
@@ -35,7 +35,7 @@ StepSequencer.prototype.init = function(samples) {
 }
 
 /**
- * @method set the StepSequencer instance dom element reference
+ * Set the StepSequencer instance dom element reference
  * @return this
  */
 StepSequencer.prototype.setDomEl = function() {
@@ -44,7 +44,7 @@ StepSequencer.prototype.setDomEl = function() {
 }
 
 /**
- * @method Create the step sequencer grid of pads,
+ * Create the step sequencer grid of pads,
  * instantiate Pad for each cell, and append the
  * generated dom to the step-sequencer dom element.
  * @return this
@@ -79,6 +79,9 @@ StepSequencer.prototype._setupGrid = function() {
   return this;
 }
 
+/**
+ * Update the grid row css class
+ */
 StepSequencer.prototype.draw = function(rowIndex) {
   var previousIndex = (rowIndex + 7) % this.sequenceLength;
 
@@ -86,6 +89,9 @@ StepSequencer.prototype.draw = function(rowIndex) {
   this.rows.getByIndex(previousIndex).domEl.classList.remove(this.rowActiveClass);
 }
 
+/**
+ * Manage websockets event communication
+ */
 StepSequencer.prototype._handleIO = function() {
   var self = this;
 
@@ -94,22 +100,10 @@ StepSequencer.prototype._handleIO = function() {
   this.socket.on('j5:ready', function() {
     console.log('j5:ready');
   });
-
-  /*
-  this.socket.on('j5:button1:down', function() {
-    console.log('j5:button1:down');
-    self.pads['step-row1_col1'].toggleEnabled();
-  });
-
-  this.socket.on('j5:button2:down', function() {
-    console.log('j5:button2:down');
-    self.pads['step-row1_col2'].toggleEnabled();
-  });
-  */
 }
 
 /**
- * @method subscribe and bind listeners to events
+ * Subscribe and bind listeners to events
  * @private
  */
 StepSequencer.prototype._handleEvents = function() {
@@ -131,6 +125,9 @@ StepSequencer.prototype._handleEvents = function() {
   }, false);
 }
 
+/**
+ * Kick off the scheduler loop
+ */
 StepSequencer.prototype.play = function (time) {
   this.scheduler.currentNote = this.scheduler.currentNote || 0;
   this.scheduler.startTime = this.context.currentTime + 0.005; // what's this 0.005 about?
@@ -138,8 +135,19 @@ StepSequencer.prototype.play = function (time) {
   this.scheduler.run();    // kick off scheduling
 }
 
+/**
+ * Stop the scheduler loop
+ */
 StepSequencer.prototype.pause = function() {
   window.clearTimeout(this.scheduler.timerID);
 }
+
+/**
+ * Fired when the init method is called
+ *
+ * @event
+ * @name stepsequencer:loaded
+ * @memberOf StepSequencer
+ */
 
 module.exports = StepSequencer;

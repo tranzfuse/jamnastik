@@ -13,7 +13,7 @@ function Sample (context, pubsub, filterNode, gainNode, url, buffer) {
 };
 
 /**
- * @method setup the sample instance
+ * Setup the sample instance
  * @param isEnabled {boolean} value to se the isFilterEnabled property
  * @return this
  */
@@ -34,7 +34,7 @@ Sample.prototype.init = function(isEnabled) {
 }
 
 /**
- * @method set the filterEnabled property
+ * Set the filterEnabled property
  * @param isEnabled {boolean}
  * @return this
  */
@@ -44,8 +44,8 @@ Sample.prototype.setFilterEnabled = function(isEnabled) {
 }
 
 /**
- * @method
- * @param time {number} time to being playback
+ * Play the sound!
+ * @param time {number} time to begin playback
  * @return this
  */
 Sample.prototype.play = function (time) {
@@ -59,18 +59,19 @@ Sample.prototype.play = function (time) {
 
   // connect source to specified nodes and destination
   // @TODO totally not sustainable, come up with something more clever
+  // and abstract this out of here too.
   if (this.filterNode && this.filterEnabled && this.gainNode) {
     this.source.connect(this.filterNode);
     this.filterNode.connect(this.gainNode);
-    this.gainNode.connect(app.context.destination);
+    this.gainNode.connect(this.context.destination);
   } else if (this.filterNode && this.filterEnabled) {
     this.source.connect(this.filterNode);
-    this.filterNode.connect(app.context.destination);
+    this.filterNode.connect(this.context.destination);
   } else if (this.gainNode) {
     this.source.connect(this.gainNode);
-    this.gainNode.connect(app.context.destination);
+    this.gainNode.connect(this.context.destination);
   } else {
-    this.source.connect(app.context.destination);
+    this.source.connect(this.context.destination);
   }
 
   this.source.start(time);
@@ -79,7 +80,6 @@ Sample.prototype.play = function (time) {
 }
 
 /**
- * @method
  * @param time {number} which point to stop the sample playback
  * @return this
  */
