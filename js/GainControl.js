@@ -10,7 +10,7 @@ function GainControl(id, socket, pubsub) {
 }
 
 /**
- * @method init setup the instance
+ * Iinit setup the instance
  * @param node {object} instance of context.createGainNode()
  * @return this
  */
@@ -23,7 +23,7 @@ GainControl.prototype.init = function(node) {
 }
 
 /**
- * @method set the GainControl instance dom element reference
+ * Set the GainControl instance dom element reference
  * @return this
  */
 GainControl.prototype.setDomEl = function() {
@@ -32,10 +32,10 @@ GainControl.prototype.setDomEl = function() {
 }
 
 /**
- * @method set node property
-* @param node {object} instance of context.createGainNode()
-* @return this
-*/
+ * Set node property
+ * @param node {object} instance of context.createGainNode()
+ * @return this
+ */
 GainControl.prototype._setNode = function(node) {
   this.node = node;
   return this;
@@ -51,7 +51,7 @@ GainControl.prototype.changeGain = function(element) {
 }
 
 /**
- * @method bind listeners to events
+ * Bind listeners to events
  * @private
  * @return undefined
  */
@@ -65,7 +65,7 @@ GainControl.prototype._handleEvents = function() {
 }
 
 /**
- * @method handle websockets events
+ * Handle websockets events
  */
 GainControl.prototype._handleIO = function() {
   var self = this,
@@ -80,5 +80,14 @@ GainControl.prototype._handleIO = function() {
     gainKnob.style.webkitTransform = 'rotate(' + Math.floor(data.knob) + 'deg)';
   });
 }
+
+/**
+ * Fired when the init method is called
+ *
+ * @event
+ * @name control:gain:loaded
+ * @memberOf GainControl
+ */
+
 
 module.exports = GainControl;

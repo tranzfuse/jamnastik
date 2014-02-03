@@ -40,7 +40,7 @@ function App() {
 }
 
 /**
- * @method Bootstrap the app
+ * Bootstrap the app
  * @return this
  */
 App.prototype.init = function() {
@@ -66,18 +66,17 @@ App.prototype.init = function() {
       this.sampleUrls,
       callback
     );
+
     this.bufferLoader.load();
   } else {
-    // Tell user to use a better browser.
-    body = document.getElementsByTagName('body');
-    body[0].innerHTML('<h1>Aww snap! This browser does not support the Web Audio API.</h1>');
+    this.handleNoSupport();
   }
 
   return this;
 }
 
 /**
- * @method callback passed as a parameter to the BufferLoader instance
+ * Callback passed as a parameter to the BufferLoader instance
  * @param bufferList {array}
  */
 App.prototype.callbackLoaded = function(bufferList) {
@@ -98,7 +97,15 @@ App.prototype.callbackLoaded = function(bufferList) {
 }
 
 /**
- * @method handle websockets events
+ * Tell user to use a better browser.
+ */
+App.prototype.handleNoSupport = function() {
+  body = document.getElementsByTagName('body');
+  body[0].innerHTML('<h1>Aww snap! This browser does not support the Web Audio API.</h1>');
+}
+
+/**
+ *  Handle websockets events and communication
  */
 App.prototype._handleIO = function() {
   var self = this;
@@ -107,7 +114,7 @@ App.prototype._handleIO = function() {
 }
 
 /**
- * @method Errr, umm, create the sample instances
+ *  Errr, umm, create the sample instances
  * @return this
  */
 App.prototype.createSamples = function() {
@@ -119,7 +126,7 @@ App.prototype.createSamples = function() {
 }
 
 /**
- * @method setter
+ * Set bufferList property
  * @param bufferList {array}
  * @return this
  */
@@ -127,5 +134,14 @@ App.prototype.setBufferList = function(bufferList) {
   this.bufferList = bufferList;
   return this;
 }
+
+/**
+ * Fired when the init method is called and app is successfully
+ * bootstrapped
+ *
+ * @event
+ * @name app:loaded
+ * @memberOf App
+ */
 
 module.exports = App;

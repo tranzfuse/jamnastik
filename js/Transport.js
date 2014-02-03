@@ -1,3 +1,6 @@
+/**
+ * @constructor
+ */
 function Transport(id, playId, pauseId, context, pubsub) {
   this.id = id;
   this.playId = playId;
@@ -10,6 +13,9 @@ function Transport(id, playId, pauseId, context, pubsub) {
   this.isPlaying = false;
 }
 
+/**
+ * Setup the transport instance
+ */
 Transport.prototype.init = function() {
   this.setDomEl();
   this.setPlayEl();
@@ -18,7 +24,7 @@ Transport.prototype.init = function() {
 }
 
 /**
- * @method set the Transport instance dom element reference
+ * Set the Transport instance dom element reference
  * @return this
  */
 Transport.prototype.setDomEl = function() {
@@ -36,6 +42,10 @@ Transport.prototype.setPauseEl = function() {
   return this;
 }
 
+/**
+ * Toggle the isPlaying property value and publish
+ * a corresponding event
+ */
 Transport.prototype.togglePlay = function() {
   this.isPlaying = !this.isPlaying;
   if (this.isPlaying) {
@@ -46,7 +56,7 @@ Transport.prototype.togglePlay = function() {
 }
 
 /**
- * @method bind listeners to events
+ * Bind listeners to events
  * @private
  */
 Transport.prototype._handleEvents = function() {
@@ -76,5 +86,21 @@ Transport.prototype._handleEvents = function() {
     }
   });
 }
+
+/**
+ * Fired when transport is playing
+ *
+ * @event
+ * @name transport:play
+ * @memberOf Transport
+ */
+
+/**
+ * Fired when transport is paused`
+ *
+ * @event
+ * @name transport:paused
+ * @memberOf Transport
+ */
 
 module.exports = Transport;

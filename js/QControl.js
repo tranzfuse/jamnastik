@@ -10,7 +10,7 @@ function QControl(id, socket) {
 }
 
 /**
- * @method init setup the instance
+ * Init setup the instance
  * @param node {object} instance of context.createQNode()
  * @return this
  */
@@ -23,7 +23,7 @@ QControl.prototype.init = function(node) {
 }
 
 /**
- * @method set the QControl instance dom element reference
+ * Set the QControl instance dom element reference
  * @return this
  */
 QControl.prototype.setDomEl = function() {
@@ -32,10 +32,10 @@ QControl.prototype.setDomEl = function() {
 }
 
 /**
- * @method set node property
-* @param node {object} instance of context.createQNode()
-* @return this
-*/
+ * Set node property
+ * @param node {object} instance of context.createQNode()
+ * @return this
+ */
 QControl.prototype._setNode = function(node) {
   this.node = node;
   return this;
@@ -48,7 +48,7 @@ QControl.prototype.changeQ = function(element) {
 }
 
 /**
- * @method bind listeners to events
+ * Bind listeners to events
  * @private
  * @return undefined
  */
@@ -62,7 +62,7 @@ QControl.prototype._handleEvents = function() {
 }
 
 /**
- * @method handle websockets events
+ * Handle websockets events and communication
  */
 QControl.prototype._handleIO = function() {
   var self = this,
@@ -71,11 +71,30 @@ QControl.prototype._handleIO = function() {
   this.socket.emit('control:q:loaded');
 
   this.socket.on('j5:potQ:read', function(data) {
-    self.domEl.value = data.calculated;
-    self.changeQ(self.domEl);
-
-    qKnob.style.webkitTransform = 'rotate(' + Math.floor(data.knob) + 'deg)';
+    self._updateKnob(data);
   });
 }
+
+/**
+ * Update q ui knob value and rotate it as incoming
+ * data is received from arduino controller
+ * @private
+ * @param data {object} The incoming data stream from websockets
+ */
+QControl.prototype._updateKnob = function(data) {
+  var qKnob = document.getElementById('q-knob');
+
+  this.domEl.value = data.calculated;
+  this.changeQ(this.domEl);
+  qKnob.style.webkitTransform = 'rotate(' + Math.floor(data.knob) + 'deg)';
+}
+
+/**
+ * Fired when the init method is called
+ *
+ * @event
+ * @name control:q:loaded
+ * @memberOf QControl
+ */
 
 module.exports = QControl;

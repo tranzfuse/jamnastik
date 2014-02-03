@@ -1,3 +1,6 @@
+/**
+ * @constructor
+ */
 function Tempo(id, pubsub) {
   this.id = id;
   this.pubsub = pubsub;
@@ -8,15 +11,28 @@ function Tempo(id, pubsub) {
   this.bpmId = 'bpm';
 }
 
+/**
+ * Setup the tempo instance
+ */
 Tempo.prototype.init = function() {
   this.setDomEl();
   this._handleEvents();
 }
 
+/**
+ * Returns the tempo
+ * @return {number}
+ */
 Tempo.prototype.getTempo = function() {
   return this.tempo;
 }
 
+/**
+ * Set the tempo property with the provided value
+ * and publish the event
+ * @param tempo {number}
+ * @return this
+ */
 Tempo.prototype.setTempo = function(tempo) {
   if (tempo < 0) {
     tempo = 0;
@@ -40,20 +56,32 @@ Tempo.prototype.setDomEl = function() {
   return this;
 }
 
+/**
+ * Update ui with current tempo value
+ */
 Tempo.prototype.updateBpm = function() {
   document.getElementById(this.bpmId).innerText = this.tempo;
 }
 
+/**
+ * Decrement the tempo by 1
+ */
 Tempo.prototype.decrease = function() {
   this.setTempo(--this.tempo);
   this.updateBpm();
 }
 
+/**
+ * Increment the tempo by 1
+ */
 Tempo.prototype.increase = function() {
   this.setTempo(++this.tempo);
   this.updateBpm();
 }
 
+/**
+ * Subscribe to and bind event listeners
+ */
 Tempo.prototype._handleEvents = function() {
   var self = this;
 
@@ -85,5 +113,13 @@ Tempo.prototype._handleEvents = function() {
     }
   });
 }
+
+/**
+ * Fired when the tempo is set
+ *
+ * @event
+ * @name tempo:set
+ * @memberOf Tempo
+ */
 
 module.exports = Tempo;

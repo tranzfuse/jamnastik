@@ -1,10 +1,16 @@
 // Base
 // -----------------------------------
 
+// Colors
+$white: #fff;
+$gray-light: #eee;
+$gray-dark: #999;
+$blue-dark: #0099cc;
+
 // Scaffolding
-$body-bg: #fff;
-$bg-color-base: #999;
-$text-color: #999;
+$body-bg: $white;
+$bg-color-base: $gray-dark;
+$text-color: $gray-dark;
 
 // Typography
 $font-family: 'Exo 2', verdana, sans-serif;
@@ -12,7 +18,7 @@ $font-weight: 100;
 
 
 $border-width: .25em / 4;
-$border-color: #999;
+$border-color: $gray-dark;
 $border-radius: 5px;
 
 
@@ -31,7 +37,7 @@ $knobs-per-group: 2;
 $control-margin: 1em;
 
 // Controls
-$controls-bg-color: #fff;
+$controls-bg-color: $white;
 $controls-border-width: $border-width;
 $controls-border-color: $border-color;
 $controls-padding: 1em;
@@ -52,14 +58,14 @@ $pad-border-width: $border-width;
 $pad-margin: 1em;
 $pad-width: 4em;
 $pad-height: 4em;
-$pad-bg-color: #fff;
-$pad-enabled-bg-color: #648F00; // #0099cc;
-$pad-active-bg-color: #84BD00; //#eee;
+$pad-bg-color: $white;
+$pad-enabled-bg-color: $blue-dark;
+$pad-active-bg-color: $gray-light;
 $pad-hover-bg-color: lighten($pad-enabled-bg-color, 50%);
 $pad-enabled-active-bg-color: darken($pad-enabled-bg-color, 10%);
 
 // Step Sequencer
-$step-sequencer-bg-color: #fff;
+$step-sequencer-bg-color: $white;
 $step-sequencer-border-color: $border-color;
 $step-sequencer-border-width: $border-width;
 $step-sequencer-padding: 2em;

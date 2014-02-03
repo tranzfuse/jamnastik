@@ -13,10 +13,11 @@ function FilterControl(id, toggleId, type, cutoff, context, pubsub, socket) {
   this.context = context;
   this.pubsub = pubsub;
   this.socket = socket;
+  this.knobEl = null;
 }
 
 /**
- * @method init setup the instance
+ * Init setup the instance
  * @param node {object} instance of context.createBiquadFilterNode()
  * @return this
  */
@@ -33,7 +34,7 @@ FilterControl.prototype.init = function(node) {
 }
 
 /**
- * @method sets the biquadfilternode instances filter type
+ * Sets the biquadfilternode instances filter type
  * @param type {string} filter type per the webaudio BiQuadFilter w3c spec:
  *  http://www.w3.org/TR/webaudio/#BiquadFilterNode-section
  * @return this
@@ -47,7 +48,7 @@ FilterControl.prototype._setFilterType = function(type) {
 }
 
 /**
- * @method sets the biquadfilternode instances frequency cutoff value
+ * Sets the biquadfilternode instances frequency cutoff value
  * @param frequency {number} the cutoff frequency value (in Hz)
  * @return this
  */
@@ -59,7 +60,7 @@ FilterControl.prototype._setCutoffFrequency = function(frequency) {
 }
 
 /**
- * @method set the FilterControl instance dom element reference
+ * Set the FilterControl instance dom element reference
  * @return this
  */
 FilterControl.prototype.setDomEl = function() {
@@ -68,7 +69,7 @@ FilterControl.prototype.setDomEl = function() {
 }
 
 /**
- * @method set the FilterControl instance toggle dom element reference
+ * Set the FilterControl instance toggle dom element reference
  * @return this
  */
 FilterControl.prototype._setToggleEl = function() {
@@ -81,10 +82,10 @@ FilterControl.prototype._setIsEnabled = function() {
 }
 
 /**
- * @method set node property
-* @param node {object} instance of context.createFilterNode()
-* @return this
-*/
+ * Set node property
+ * @param node {object} instance of context.createFilterNode()
+ * @return this
+ */
 FilterControl.prototype._setNode = function(node) {
   this.node = node;
   return this;
@@ -106,7 +107,7 @@ FilterControl.prototype.changeFilter = function(element) {
 }
 
 /**
- * @method bind listeners to events
+ * Bind listeners to events
  * @private
  * @return undefined
  */
@@ -118,6 +119,7 @@ FilterControl.prototype._handleEvents = function() {
     self.changeFilter(e.target);
   }, false);
 
+  //click
   this.toggleEl.addEventListener('click', function(e) {
     self.isEnabled = self.toggleEl.checked;
     self.pubsub.emit('filter:enabled:' + self.isEnabled);
@@ -125,7 +127,7 @@ FilterControl.prototype._handleEvents = function() {
 }
 
 /**
- * @method handle websockets events
+ * Handle websockets events and communication
  */
 FilterControl.prototype._handleIO = function() {
   var self = this,
@@ -134,18 +136,60 @@ FilterControl.prototype._handleIO = function() {
   this.socket.emit('control:filter:loaded');
 
   this.socket.on('j5:button1:down', function() {
-    //console.log('j5:button1:down');
-    self.isEnabled = !self.isEnabled;
-    self.toggleEl.checked = self.isEnabled;
-    self.pubsub.emit('filter:enabled:' + self.isEnabled);
+    self.toggleFilter();
   });
 
   this.socket.on('j5:potFilter:read', function(data) {
-    self.domEl.value = data.calculated;
-    self.changeFilter(self.domEl);
-
-    filterKnob.style.webkitTransform = 'rotate(' + Math.floor(data.knob) + 'deg)';
+    self._updateKnob(data);
   });
 }
+
+/**
+ * Handle filter checkbox checked status; emit a corresponding event
+ */
+FilterControl.prototype.toggleFilter = function() {
+  this.isEnabled = !this.isEnabled;
+  this.toggleEl.checked = this.isEnabled;
+  this.pubsub.emit('filter:enabled:' + this.isEnabled);
+}
+
+/**
+ * Update filter ui knob value and rotate it as incoming
+ * data is received from arduino controller
+ * @private
+ * @param data {object} The incoming data stream from websockets
+ */
+FilterControl.prototype._updateKnob = function(data) {
+  var filterKnob = document.getElementById('filter-knob');
+
+  this.domEl.value = data.calculated;
+  this.changeFilter(this.domEl);
+  filterKnob.style.webkitTransform = 'rotate(' + Math.floor(data.knob) + 'deg)';
+}
+
+/**
+ * Fired when the filter checkbox is checked
+ *
+ * @event
+ * @name filter:enabled:true
+ * @memberOf FilterControl
+ */
+
+/**
+ * Fired when the filter checkbox is unchecked
+ *
+ * @event
+ * @name filter:enabled:false
+ * @memberOf FilterControl
+ */
+
+
+/**
+ * Fired when the init method is called
+ *
+ * @event
+ * @name control:filter:loaded
+ * @memberOf FilterControl
+ */
 
 module.exports = FilterControl;
