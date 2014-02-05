@@ -1,24 +1,83 @@
 var Pad = require('./Pad');
-var Iterator = require('./Iterator');
 
 /**
  * @constructor
  */
 function StepSequencer(id, context, pubsub, scheduler, socket) {
+
+  /**
+   * The step sequencer html element's id
+   */
   this.id = id;
+
+  /**
+   * The AudioContext instance
+   */
   this.context = context;
+
+  /**
+   * The app pubsub instance
+   */
   this.pubsub = pubsub;
+
+  /**
+   * The app scheduler instance
+   */
   this.scheduler = scheduler;
+
+  /**
+   * The app websocket instance
+   */
   this.socket = socket;
+
+  /**
+   * The step sequencer html element dom reference
+   */
   this.domEl = null;
+
+  /**
+   * Array of sample instances
+   */
   this.samples = null;
-  this.rows = new Iterator();
-  this.pads = {};
-  this.grid = [];
-  this.gridCols = 8;
-  this.gridRows = 8;
-  this.rowActiveClass = 'active';
+
+  /**
+   * Refers to row length, but also represents grid size (8 x 8)
+   */
   this.sequenceLength = 8;
+
+  /**
+   * Stores array of object references to each row's dom element and
+   * containing pad instances as an array
+   */
+  this.rows = [];
+
+  /**
+   * Stores references to each cell of the sequencer grid.
+   * Each cell holds an instance of the Pad class.
+   */
+  this.grid = [];
+
+  /**
+   * Sequencer grid column count
+   */
+  this.gridCols = this.sequenceLength;
+
+  /**
+   * Sequencer grid row count
+   */
+  this.gridRows = this.sequenceLength;
+
+  /**
+   * A map of pad instances. The pad instance's dom element
+   * id is key, pad instance is the key. This map of pads
+   * exists as arrays within the grid array property.
+   */
+  this.pads = {};
+
+  /**
+   * The grid's active row css class
+   */
+  this.rowActiveClass = 'active';
 }
 
 /**
@@ -51,31 +110,40 @@ StepSequencer.prototype.setDomEl = function() {
  */
 StepSequencer.prototype._setupGrid = function() {
   var docFrag = document.createDocumentFragment();
-  var row, obj, arr = [], pad;
+  var row, obj, pads, pad;
 
   for (var i = 0; i < this.gridCols; i++) {
-    this.grid[i] = [];
 
+    //create the row dom element
     row = document.createElement('div');
     row.classList.add('step-row');
     row.id = 'step-row' + (i + 1);
+
+    //store reference to the row dom element
     obj = {};
     obj['id'] = row.id;
     obj['domEl'] = row;
-    arr.push(obj);
+    this.grid[i] = obj;
 
+    //initialize the local pads var before each for loop
+    pads = [];
+
+    //create the pads for each row
     for (var j = 0; j < this.gridRows; j++) {
       pad = document.createElement('div');
       pad.classList.add('pad', 'col', 'col' + (j + 1));
       pad.id = row.id + '_col' + (j + 1);
-      this.grid[i][j] = new Pad(pad.id, this.samples[j], null, pad);
-      this.pads[pad.id] = this.grid[i][j];
+      pads[j] = new Pad(pad.id, this.samples[j], null, pad);
+      //Store each pad instance in this.pads
+      this.pads[pad.id] = pads[j];
       row.appendChild(pad);
     }
+    this.grid[i].pads = pads;
+
     docFrag.appendChild(row);
   }
   this.domEl.appendChild(docFrag);
-  this.rows.init(arr);
+
   return this;
 }
 
@@ -85,8 +153,8 @@ StepSequencer.prototype._setupGrid = function() {
 StepSequencer.prototype.draw = function(rowIndex) {
   var previousIndex = (rowIndex + 7) % this.sequenceLength;
 
-  this.rows.getByIndex(rowIndex).domEl.classList.add(this.rowActiveClass);
-  this.rows.getByIndex(previousIndex).domEl.classList.remove(this.rowActiveClass);
+  this.grid[rowIndex].domEl.classList.add(this.rowActiveClass);
+  this.grid[previousIndex].domEl.classList.remove(this.rowActiveClass);
 }
 
 /**
@@ -132,7 +200,7 @@ StepSequencer.prototype.play = function (time) {
   this.scheduler.currentNote = this.scheduler.currentNote || 0;
   this.scheduler.startTime = this.context.currentTime + 0.005; // what's this 0.005 about?
   this.scheduler.nextNoteTime = 0.0;
-  this.scheduler.run();    // kick off scheduling
+  this.scheduler.run();
 }
 
 /**

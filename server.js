@@ -6,7 +6,7 @@ var j5 = require('johnny-five'),
   io = require('socket.io').listen(server),
   port = 4567;
 
-var controllerAttached = true;
+var controllerAttached = false;
 
 //johnny-five thingies
 var potFilter, potQ;

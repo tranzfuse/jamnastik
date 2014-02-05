@@ -110,7 +110,7 @@ Scheduler.prototype.run = function() {
   // and create an array of the samples corresponding to the enabled pads
   // for playback.
   // @TODO Is there a much better way to manage this?
-  for (var j = 0, row = this.stepSequencer.grid[this.currentNote]; j < row.length; j++) {
+  for (var j = 0, row = this.stepSequencer.grid[this.currentNote].pads; j < row.length; j++) {
     if (row[j].enabled) {
       activeRowSamples.push(row[j].sample);
     }
