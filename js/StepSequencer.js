@@ -4,21 +4,50 @@ var Pad = require('./Pad');
  * @constructor
  */
 function StepSequencer(id, context, pubsub, scheduler, socket) {
+
+  /**
+   * The step sequencer html element's id
+   */
   this.id = id;
+
+  /**
+   * The AudioContext instance
+   */
   this.context = context;
+
+  /**
+   * The app pubsub instance
+   */
   this.pubsub = pubsub;
+
+  /**
+   * The app scheduler instance
+   */
   this.scheduler = scheduler;
+
+  /**
+   * The app websocket instance
+   */
   this.socket = socket;
+
+  /**
+   * The step sequencer html element dom reference
+   */
   this.domEl = null;
+
+  /**
+   * Array of sample instances
+   */
   this.samples = null;
 
   /**
-   * Refers to row length, but also grid size (8 x 8)
+   * Refers to row length, but also represents grid size (8 x 8)
    */
   this.sequenceLength = 8;
 
   /**
-   * Stores array of object references to row dom elements
+   * Stores array of object references to each row's dom element and
+   * containing pad instances as an array
    */
   this.rows = [];
 
@@ -40,7 +69,8 @@ function StepSequencer(id, context, pubsub, scheduler, socket) {
 
   /**
    * A map of pad instances. The pad instance's dom element
-   * id is key, pad instance is the key.
+   * id is key, pad instance is the key. This map of pads
+   * exists as arrays within the grid array property.
    */
   this.pads = {};
 
@@ -80,31 +110,35 @@ StepSequencer.prototype.setDomEl = function() {
  */
 StepSequencer.prototype._setupGrid = function() {
   var docFrag = document.createDocumentFragment();
-  var row, obj, pad;
+  var row, obj, pads, pad;
 
   for (var i = 0; i < this.gridCols; i++) {
 
-    //create the row dom elements
+    //create the row dom element
     row = document.createElement('div');
     row.classList.add('step-row');
     row.id = 'step-row' + (i + 1);
 
-    //store references to the row dom elements
+    //store reference to the row dom element
     obj = {};
     obj['id'] = row.id;
     obj['domEl'] = row;
-
     this.grid[i] = obj;
+
+    //initialize the local pads var before each for loop
+    pads = [];
 
     //create the pads for each row
     for (var j = 0; j < this.gridRows; j++) {
       pad = document.createElement('div');
       pad.classList.add('pad', 'col', 'col' + (j + 1));
       pad.id = row.id + '_col' + (j + 1);
-      this.pads[pad.id] = new Pad(pad.id, this.samples[j], null, pad);
+      pads[j] = new Pad(pad.id, this.samples[j], null, pad);
+      //Store each pad instance in this.pads
+      this.pads[pad.id] = pads[j];
       row.appendChild(pad);
     }
-    this.grid[i].pads = this.pads;
+    this.grid[i].pads = pads;
 
     docFrag.appendChild(row);
   }
