@@ -1,4 +1,3 @@
-var util = require('util');
 var Knob = require('./Knob');
 
 /**
@@ -16,7 +15,7 @@ function FilterControl(id, context, pubsub, socket, toggleId, type, cutoff) {
   this.node = null;
   this.toggleEl = null;
   this.isEnabled = false;
-  this.knob = new Knob('filter-knob');
+  this.knob = new Knob('filter-knob', this.pubsub);
 }
 
 /**
@@ -113,7 +112,6 @@ FilterControl.prototype.changeFilter = function(element) {
 /**
  * Bind listeners to events
  * @private
- * @return undefined
  */
 FilterControl.prototype._handleEvents = function() {
   var self = this;
@@ -128,6 +126,12 @@ FilterControl.prototype._handleEvents = function() {
     self.isEnabled = self.toggleEl.checked;
     self.pubsub.emit('filter:enabled:' + self.isEnabled);
   }, false);
+
+  //custom
+  this.pubsub.on('knob:turn', function(data) {
+    self.setInputRangeValue(data.value);
+    self.changeFilter(self.domEl);
+  });
 }
 
 /**
@@ -163,9 +167,17 @@ FilterControl.prototype.toggleFilter = function() {
  * @param data {object} The incoming data stream from websockets
  */
 FilterControl.prototype._updateKnob = function(data) {
-  this.domEl.value = data.calculated;
+  this.setInputRangeValue(data.calculated);
   this.changeFilter(this.domEl);
-  this.knob.rotate(Math.floor(data.knob));
+  this.knob.turn(Math.floor(data.knob));
+}
+
+/**
+ * Set the filter's html input range value
+ * @param data {number}
+ */
+FilterControl.prototype.setInputRangeValue = function(data) {
+  this.domEl.value = data;
 }
 
 /**

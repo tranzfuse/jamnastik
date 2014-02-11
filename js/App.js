@@ -37,6 +37,7 @@ function App() {
   this.samples = [];
   this.tempo = null;
   this.controlPanel = null;
+  this.pubsub = null;
 }
 
 /**

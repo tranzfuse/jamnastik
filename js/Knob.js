@@ -1,36 +1,67 @@
 var dom = require('./dom');
+var utils = require('./utils');
 
 /**
  * Borrowed the general concept and math from
  * https://github.com/martinaglv/KnobKnob/blob/master/knobKnob/knobKnob.jquery.js
  * @constructor
  */
-function Knob(id) {
+function Knob(id, pubsub) {
+
+  /**
+   * dom element id
+   */
   this.id = id;
-  this.snap = 0;
-  this.value = 0;
+
+  /**
+   * The pubsub instance
+   */
+  this.pubsub = pubsub;
+
+  /**
+   * dom element reference
+   */
   this.domEl = null;
+
+  /**
+   * Save the starting position of the drag
+   */
   this.startDeg = -1;
+
+  /**
+   * Keep track of the current degree the knob is turned to
+   */
   this.currentDeg = 0;
-  this.rotation = null;
+
+  /**
+   * Store the current degree the knob is turned to on mouseup
+   */
+  this.rotation = 0;
+
+  /**
+   * The last degree the knob was turned to
+   */
   this.lastDeg = 0;
+
+  /**
+   * Maximum degree the knob should be turned
+   */
   this.maxDeg = 270;
 }
 
 Knob.prototype.init = function() {
   this.setDomEl();
-
-  if (this.value > 0 && this.value <= (this.maxDeg - 1)) {
-    this.rotation = this.lastDeg = this.currentDeg = this.value;
-    this.rotate(this.currentDeg);
-  }
-
   this._handleEvents();
 }
 
-Knob.prototype.rotate = function(value) {
+/**
+ * Rotate the knob dom element
+ * @return this
+ */
+Knob.prototype.turn = function(value) {
   this.domEl.style.webkitTransform = 'rotate(' + value + 'deg)';
   this.domEl.style.transform = 'rotate(' + value + 'deg)';
+  return this;
 }
 
 /**
@@ -58,12 +89,13 @@ Knob.prototype._handleEvents = function() {
       x: offset.left + dom.getWidth(self.domEl) / 2
     };
 
-    var a, b, deg, tmp,
-      rad2deg = 180 / Math.PI;
+    var a, b, deg, tmp;
+
+    var rad2deg = 180 / Math.PI;
 
     var handleMousemove = function(e) {
 
-      e = (e.touches) ? e.touches[0] : e;
+      //e = (e.touches) ? e.touches[0] : e;
 
       a = center.y - e.pageY;
       b = center.x - e.pageX;
@@ -76,7 +108,7 @@ Knob.prototype._handleEvents = function() {
       }
 
       // Save the starting position of the drag
-      if (self.startDeg == -1) {
+      if (self.startDeg === -1) {
           self.startDeg = deg;
       }
 
@@ -91,11 +123,6 @@ Knob.prototype._handleEvents = function() {
           tmp = tmp % self.maxDeg;
       }
 
-      // Snapping in the off position:
-      if (self.snap && tmp < self.snap) {
-          tmp = 0;
-      }
-
       // This would suggest we are at an end position;
       // we need to block further rotation.
       if (Math.abs(tmp - self.lastDeg) > 180) {
@@ -105,7 +132,9 @@ Knob.prototype._handleEvents = function() {
       self.currentDeg = tmp;
       self.lastDeg = tmp;
 
-      self.rotate(self.currentDeg);
+      self.turn(self.currentDeg);
+
+      self.pubsub.emit('knob:turn', {value: utils.normalize(1, self.maxDeg, self.currentDeg)});
     };
 
     var handleMouseup = function(e) {
@@ -126,5 +155,13 @@ Knob.prototype._handleEvents = function() {
     document.addEventListener('mouseup', handleMouseup);
   });
 }
+
+/**
+ * Fired when the knob is turning
+ *
+ * @event
+ * @name knob:turn
+ * @memberOf Knob
+ */
 
 module.exports = Knob;
