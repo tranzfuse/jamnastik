@@ -6,7 +6,7 @@ var utils = require('./utils');
  * https://github.com/martinaglv/KnobKnob/blob/master/knobKnob/knobKnob.jquery.js
  * @constructor
  */
-function Knob(id, pubsub) {
+function Knob(id, pubsub, rangeMax, eventName, initMax) {
 
   /**
    * dom element id
@@ -19,39 +19,68 @@ function Knob(id, pubsub) {
   this.pubsub = pubsub;
 
   /**
+   * The html input range max value for the knob control
+   * @member {number}
+   */
+  this.rangeMax = rangeMax || 1;
+
+  /**
+   * Dynamically named event emitted on mouse events
+   * @member {string}
+   */
+  this.eventName = eventName;
+
+  /**
    * dom element reference
+   * @member {object}
    */
   this.domEl = null;
 
   /**
    * Save the starting position of the drag
+   * @member {number}
    */
   this.startDeg = -1;
 
   /**
    * Keep track of the current degree the knob is turned to
+   * @member {number}
    */
   this.currentDeg = 0;
 
   /**
    * Store the current degree the knob is turned to on mouseup
+   * @member {number}
    */
   this.rotation = 0;
 
   /**
    * The last degree the knob was turned to
+   * @member {number}
    */
   this.lastDeg = 0;
 
   /**
    * Maximum degree the knob should be turned
+   * @member {number}
    */
   this.maxDeg = 270;
+
+  /**
+   * Should the knob be turned to the maxDeg on initialization
+   * @member {boolean}
+   */
+  this.initMax = initMax;
 }
 
 Knob.prototype.init = function() {
   this.setDomEl();
   this._handleEvents();
+
+  if (this.initMax) {
+    this.rotation = this.lastDeg = this.currentDeg = this.maxDeg;
+    this.turn(this.maxDeg);
+  }
 }
 
 /**
@@ -134,7 +163,7 @@ Knob.prototype._handleEvents = function() {
 
       self.turn(self.currentDeg);
 
-      self.pubsub.emit('knob:turn', {value: utils.normalize(1, self.maxDeg, self.currentDeg)});
+      self.pubsub.emit(self.eventName, {value: utils.normalize(self.rangeMax, self.maxDeg, self.currentDeg)});
     };
 
     var handleMouseup = function(e) {
@@ -160,7 +189,7 @@ Knob.prototype._handleEvents = function() {
  * Fired when the knob is turning
  *
  * @event
- * @name knob:turn
+ * @name {id}-knob:turn
  * @memberOf Knob
  */
 

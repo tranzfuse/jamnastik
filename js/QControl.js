@@ -1,12 +1,15 @@
+var Knob = require('./Knob');
 /**
  * @constructor
  */
-function QControl(id, socket) {
+function QControl(id, socket, pubsub) {
   this.id = id;
   this.socket = socket;
+  this.pubsub = pubsub;
   this.domEl = null;
   this.node = null;
   this.mult = 30;
+  this.knob = new Knob('q-knob', this.pubsub, null, this.id + ':turn');
 }
 
 /**
@@ -15,6 +18,7 @@ function QControl(id, socket) {
  * @return this
  */
 QControl.prototype.init = function(node) {
+  this.knob.init();
   this.setDomEl();
   this._setNode(node);
   this._handleEvents();
@@ -59,14 +63,20 @@ QControl.prototype._handleEvents = function() {
   this.domEl.addEventListener('input', function(e) {
     self.changeQ(e.target);
   }, false);
+
+  //custom
+  this.pubsub.on(self.knob.eventName, function(data) {
+  console.log('q knob turn');
+    self.setInputRangeValue(data.value);
+    self.changeQ(self.domEl);
+  });
 }
 
 /**
  * Handle websockets events and communication
  */
 QControl.prototype._handleIO = function() {
-  var self = this,
-    qKnob = document.getElementById('q-knob');
+  var self = this;
 
   this.socket.emit('control:q:loaded');
 
@@ -82,11 +92,17 @@ QControl.prototype._handleIO = function() {
  * @param data {object} The incoming data stream from websockets
  */
 QControl.prototype._updateKnob = function(data) {
-  var qKnob = document.getElementById('q-knob');
-
-  this.domEl.value = data.calculated;
+  this.setInputRangeValue(data.calculated);
   this.changeQ(this.domEl);
-  qKnob.style.webkitTransform = 'rotate(' + Math.floor(data.knob) + 'deg)';
+  this.knob.turn(Math.floor(data.knob));
+}
+
+/**
+ * Set the Q's html input range value
+ * @param data {number}
+ */
+QControl.prototype.setInputRangeValue = function(data) {
+  this.domEl.value = data;
 }
 
 /**

@@ -15,7 +15,7 @@ function FilterControl(id, context, pubsub, socket, toggleId, type, cutoff) {
   this.node = null;
   this.toggleEl = null;
   this.isEnabled = false;
-  this.knob = new Knob('filter-knob', this.pubsub);
+  this.knob = new Knob('filter-knob', this.pubsub, null, this.id + ':turn');
 }
 
 /**
@@ -128,7 +128,7 @@ FilterControl.prototype._handleEvents = function() {
   }, false);
 
   //custom
-  this.pubsub.on('knob:turn', function(data) {
+  this.pubsub.on(self.knob.eventName, function(data) {
     self.setInputRangeValue(data.value);
     self.changeFilter(self.domEl);
   });

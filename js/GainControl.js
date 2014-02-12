@@ -1,3 +1,5 @@
+var Knob = require('./Knob');
+
 /**
  * @constructor
  */
@@ -7,6 +9,7 @@ function GainControl(id, socket, pubsub) {
   this.pubsub = pubsub;
   this.domEl = null;
   this.node = null;
+  this.knob = new Knob('gain-knob', this.pubsub, 100, this.id + ':turn', true);
 }
 
 /**
@@ -15,7 +18,8 @@ function GainControl(id, socket, pubsub) {
  * @return this
  */
 GainControl.prototype.init = function(node) {
-  this.setDomEl(this.id);
+  this.knob.init();
+  this.setDomEl();
   this._setNode(node);
   this._handleEvents();
   this._handleIO();
@@ -62,6 +66,12 @@ GainControl.prototype._handleEvents = function() {
   this.domEl.addEventListener('input', function(e) {
     self.changeGain(e.target);
   }, false);
+
+  //custom
+  this.pubsub.on(self.knob.eventName, function(data) {
+    self.setInputRangeValue(data.value);
+    self.changeGain(self.domEl);
+  });
 }
 
 /**
@@ -74,11 +84,28 @@ GainControl.prototype._handleIO = function() {
   this.socket.emit('control:gain:loaded');
 
   this.socket.on('j5:potGain:read', function(data) {
-    self.domEl.value = data.calculated;
-    self.changeGain(self.domEl);
-
-    gainKnob.style.webkitTransform = 'rotate(' + Math.floor(data.knob) + 'deg)';
+    self._updateKnob(data);
   });
+}
+
+/**
+ * Set the gain's html input range value
+ * @param data {number}
+ */
+GainControl.prototype.setInputRangeValue = function(data) {
+  this.domEl.value = data;
+}
+
+/**
+ * Update ui knob value and rotate it as incoming
+ * data is received from arduino controller
+ * @private
+ * @param data {object} The incoming data stream from websockets
+ */
+GainControl.prototype._updateKnob = function(data) {
+  this.setInputRangeValue(data.calculated);
+  this.changeGain(this.domEl);
+  this.knob.turn(Math.floor(data.knob));
 }
 
 /**
@@ -88,6 +115,5 @@ GainControl.prototype._handleIO = function() {
  * @name control:gain:loaded
  * @memberOf GainControl
  */
-
 
 module.exports = GainControl;
