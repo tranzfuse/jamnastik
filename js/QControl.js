@@ -66,7 +66,6 @@ QControl.prototype._handleEvents = function() {
 
   //custom
   this.pubsub.on(self.knob.eventName, function(data) {
-  console.log('q knob turn');
     self.setInputRangeValue(data.value);
     self.changeQ(self.domEl);
   });
