@@ -4,7 +4,7 @@
 function Tempo(id, pubsub) {
   this.id = id;
   this.pubsub = pubsub;
-  this.domEl = null;
+  this.domEl = document.getElementById(this.id);
   this.tempo = 120.0;
   this.decreaseId = 'tempo-decrease';
   this.increaseId = 'tempo-increase';
@@ -15,7 +15,6 @@ function Tempo(id, pubsub) {
  * Setup the tempo instance
  */
 Tempo.prototype.init = function() {
-  this.setDomEl();
   this._handleEvents();
 }
 
@@ -44,15 +43,6 @@ Tempo.prototype.setTempo = function(tempo) {
 
   this.pubsub.emit('tempo:set', {tempo: this.tempo});
 
-  return this;
-}
-
-/**
- * @method set the Tempo instance dom element reference
- * @return this
- */
-Tempo.prototype.setDomEl = function() {
-  this.domEl = document.getElementById(this.id);
   return this;
 }
 

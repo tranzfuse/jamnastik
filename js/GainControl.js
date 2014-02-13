@@ -7,7 +7,7 @@ function GainControl(id, socket, pubsub) {
   this.id = id;
   this.socket = socket;
   this.pubsub = pubsub;
-  this.domEl = null;
+  this.domEl = document.getElementById(this.id);
   this.node = null;
   this.knob = new Knob('gain-knob', this.pubsub, 100, true);
 }
@@ -19,19 +19,9 @@ function GainControl(id, socket, pubsub) {
  */
 GainControl.prototype.init = function(node) {
   this.knob.init();
-  this.setDomEl();
   this._setNode(node);
   this._handleEvents();
   this._handleIO();
-  return this;
-}
-
-/**
- * Set the GainControl instance dom element reference
- * @return this
- */
-GainControl.prototype.setDomEl = function() {
-  this.domEl = document.getElementById(this.id);
   return this;
 }
 
