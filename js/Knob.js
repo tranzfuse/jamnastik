@@ -6,7 +6,7 @@ var utils = require('./utils');
  * https://github.com/martinaglv/KnobKnob/blob/master/knobKnob/knobKnob.jquery.js
  * @constructor
  */
-function Knob(id, pubsub, rangeMax, eventName, initMax) {
+function Knob(id, pubsub, rangeMax, initMax) {
 
   /**
    * dom element id
@@ -22,13 +22,13 @@ function Knob(id, pubsub, rangeMax, eventName, initMax) {
    * The html input range max value for the knob control
    * @member {number}
    */
-  this.rangeMax = rangeMax || 1;
+  this.rangeMax = rangeMax;
 
   /**
    * Dynamically named event emitted on mouse events
    * @member {string}
    */
-  this.eventName = eventName;
+  this.eventName = this.id + ':turn';
 
   /**
    * dom element reference

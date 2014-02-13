@@ -9,7 +9,7 @@ function QControl(id, socket, pubsub) {
   this.domEl = null;
   this.node = null;
   this.mult = 30;
-  this.knob = new Knob('q-knob', this.pubsub, null, this.id + ':turn');
+  this.knob = new Knob('q-knob', this.pubsub, 1);
 }
 
 /**

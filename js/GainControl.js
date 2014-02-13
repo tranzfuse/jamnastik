@@ -9,7 +9,7 @@ function GainControl(id, socket, pubsub) {
   this.pubsub = pubsub;
   this.domEl = null;
   this.node = null;
-  this.knob = new Knob('gain-knob', this.pubsub, 100, this.id + ':turn', true);
+  this.knob = new Knob('gain-knob', this.pubsub, 100, true);
 }
 
 /**

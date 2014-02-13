@@ -15,7 +15,7 @@ function FilterControl(id, context, pubsub, socket, toggleId, type, cutoff) {
   this.node = null;
   this.toggleEl = null;
   this.isEnabled = false;
-  this.knob = new Knob('filter-knob', this.pubsub, null, this.id + ':turn');
+  this.knob = new Knob('filter-knob', this.pubsub, 1);
 }
 
 /**
