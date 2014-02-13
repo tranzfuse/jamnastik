@@ -37,6 +37,7 @@ function App() {
   this.samples = [];
   this.tempo = null;
   this.controlPanel = null;
+  this.pubsub = null;
 }
 
 /**
@@ -58,8 +59,8 @@ App.prototype.init = function() {
     this.stepSequencer = new StepSequencer('step-sequencer', this.context, this.pubsub, this.scheduler, this.socket);
     this.transport = new Transport('transport', 'play', 'pause', this.context, this.pubsub);
     this.gainControl = new GainControl('gain-control', this.socket, this.pubsub);
-    this.filterControl = new FilterControl('filter-control', 'filter-toggle', 'lowpass', 440, this.context, this.pubsub, this.socket);
-    this.qControl = new QControl('q-control', this.socket);
+    this.filterControl = new FilterControl('filter-control', this.context, this.pubsub, this.socket, 'filter-toggle', 'lowpass', 440);
+    this.qControl = new QControl('q-control', this.socket, this.pubsub);
     this.sampleUrls = sampleUrls;
     this.bufferLoader = new BufferLoader(
       this.context,

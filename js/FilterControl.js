@@ -1,19 +1,21 @@
+var Knob = require('./Knob');
+
 /**
  * @constructor
  */
-function FilterControl(id, toggleId, type, cutoff, context, pubsub, socket) {
+function FilterControl(id, context, pubsub, socket, toggleId, type, cutoff) {
   this.id = id;
-  this.toggleId = toggleId;
-  this.domEl = null;
-  this.node = null;
-  this.toggleEl = null;
-  this.type = type;
-  this.cutoffFrequency = cutoff;
-  this.isEnabled = false;
   this.context = context;
   this.pubsub = pubsub;
   this.socket = socket;
-  this.knobEl = null;
+  this.toggleId = toggleId;
+  this.type = type;
+  this.cutoffFrequency = cutoff;
+  this.domEl = null;
+  this.node = null;
+  this.toggleEl = null;
+  this.isEnabled = false;
+  this.knob = new Knob('filter-knob', this.pubsub, 1);
 }
 
 /**
@@ -22,6 +24,7 @@ function FilterControl(id, toggleId, type, cutoff, context, pubsub, socket) {
  * @return this
  */
 FilterControl.prototype.init = function(node) {
+  this.knob.init();
   this.setDomEl();
   this._setToggleEl();
   this._setIsEnabled();
@@ -30,6 +33,15 @@ FilterControl.prototype.init = function(node) {
   this._setCutoffFrequency(this.cutoffFrequency);
   this._handleEvents();
   this._handleIO();
+  return this;
+}
+
+/**
+ * Set the FilterControl instance dom element reference
+ * @return this
+ */
+FilterControl.prototype.setDomEl = function() {
+  this.domEl = document.getElementById(this.id);
   return this;
 }
 
@@ -57,15 +69,6 @@ FilterControl.prototype._setCutoffFrequency = function(frequency) {
     throw new ReferenceError('FilterControl.node is not defined', 'FilterControl');
   }
   this.node.frequency.value = frequency || 440;
-}
-
-/**
- * Set the FilterControl instance dom element reference
- * @return this
- */
-FilterControl.prototype.setDomEl = function() {
-  this.domEl = document.getElementById(this.id);
-  return this;
 }
 
 /**
@@ -109,7 +112,6 @@ FilterControl.prototype.changeFilter = function(element) {
 /**
  * Bind listeners to events
  * @private
- * @return undefined
  */
 FilterControl.prototype._handleEvents = function() {
   var self = this;
@@ -124,14 +126,19 @@ FilterControl.prototype._handleEvents = function() {
     self.isEnabled = self.toggleEl.checked;
     self.pubsub.emit('filter:enabled:' + self.isEnabled);
   }, false);
+
+  //custom
+  this.pubsub.on(self.knob.eventName, function(data) {
+    self.setInputRangeValue(data.value);
+    self.changeFilter(self.domEl);
+  });
 }
 
 /**
  * Handle websockets events and communication
  */
 FilterControl.prototype._handleIO = function() {
-  var self = this,
-    filterKnob = document.getElementById('filter-knob');
+  var self = this;
 
   this.socket.emit('control:filter:loaded');
 
@@ -160,11 +167,17 @@ FilterControl.prototype.toggleFilter = function() {
  * @param data {object} The incoming data stream from websockets
  */
 FilterControl.prototype._updateKnob = function(data) {
-  var filterKnob = document.getElementById('filter-knob');
-
-  this.domEl.value = data.calculated;
+  this.setInputRangeValue(data.calculated);
   this.changeFilter(this.domEl);
-  filterKnob.style.webkitTransform = 'rotate(' + Math.floor(data.knob) + 'deg)';
+  this.knob.turn(Math.floor(data.knob));
+}
+
+/**
+ * Set the filter's html input range value
+ * @param data {number}
+ */
+FilterControl.prototype.setInputRangeValue = function(data) {
+  this.domEl.value = data;
 }
 
 /**
