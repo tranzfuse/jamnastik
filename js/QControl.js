@@ -6,7 +6,7 @@ function QControl(id, socket, pubsub) {
   this.id = id;
   this.socket = socket;
   this.pubsub = pubsub;
-  this.domEl = null;
+  this.domEl = document.getElementById(this.id);
   this.node = null;
   this.mult = 30;
   this.knob = new Knob('q-knob', this.pubsub, 1);
@@ -19,19 +19,9 @@ function QControl(id, socket, pubsub) {
  */
 QControl.prototype.init = function(node) {
   this.knob.init();
-  this.setDomEl();
   this._setNode(node);
   this._handleEvents();
   this._handleIO();
-  return this;
-}
-
-/**
- * Set the QControl instance dom element reference
- * @return this
- */
-QControl.prototype.setDomEl = function() {
-  this.domEl = document.getElementById(this.id);
   return this;
 }
 

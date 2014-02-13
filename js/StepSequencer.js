@@ -33,7 +33,7 @@ function StepSequencer(id, context, pubsub, scheduler, socket) {
   /**
    * The step sequencer html element dom reference
    */
-  this.domEl = null;
+  this.domEl = document.getElementById(this.id);
 
   /**
    * Array of sample instances
@@ -86,19 +86,9 @@ function StepSequencer(id, context, pubsub, scheduler, socket) {
  */
 StepSequencer.prototype.init = function(samples) {
   this.samples = samples;
-  this.setDomEl(this.id);
   this._setupGrid();
   this._handleEvents();
   //this._handleIO();
-  return this;
-}
-
-/**
- * Set the StepSequencer instance dom element reference
- * @return this
- */
-StepSequencer.prototype.setDomEl = function() {
-  this.domEl = document.getElementById(this.id);
   return this;
 }
 

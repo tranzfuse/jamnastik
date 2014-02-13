@@ -7,9 +7,9 @@ function Transport(id, playId, pauseId, context, pubsub) {
   this.pauseId = pauseId;
   this.context = context;
   this.pubsub = pubsub;
-  this.domEl = null;
-  this.playEl = null;
-  this.pauseEl = null;
+  this.domEl = document.getElementById(this.id);
+  this.playEl = document.getElementById(this.playId);
+  this.pauseEl = document.getElementById(this.pauseId);
   this.isPlaying = false;
 }
 
@@ -17,29 +17,7 @@ function Transport(id, playId, pauseId, context, pubsub) {
  * Setup the transport instance
  */
 Transport.prototype.init = function() {
-  this.setDomEl();
-  this.setPlayEl();
-  this.setPauseEl();
   this._handleEvents();
-}
-
-/**
- * Set the Transport instance dom element reference
- * @return this
- */
-Transport.prototype.setDomEl = function() {
-  this.domEl = document.getElementById(this.id);
-  return this;
-}
-
-Transport.prototype.setPlayEl = function() {
-  this.playEl = document.getElementById(this.playId);
-  return this;
-}
-
-Transport.prototype.setPauseEl = function() {
-  this.pauseEl = document.getElementById(this.pauseId);
-  return this;
 }
 
 /**

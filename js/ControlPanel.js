@@ -1,7 +1,7 @@
 function ControlPanel(id, titleId, pubsub) {
   this.id = id;
-  this.domEl = null;
   this.titleId = titleId;
+  this.domEl = document.getElementById(this.id);
   this.titleDomEl = null;
   this.isOpen = true;
   this.isClosed = false;
@@ -10,18 +10,8 @@ function ControlPanel(id, titleId, pubsub) {
 }
 
 ControlPanel.prototype.init = function() {
-  this.setDomEl();
   this.setTitleDomEl();
   this._handleEvents();
-}
-
-/**
- * set the ControlPanel instance dom element reference
- * @return this
- */
-ControlPanel.prototype.setDomEl = function() {
-  this.domEl = document.getElementById(this.id);
-  return this;
 }
 
 ControlPanel.prototype.setTitleDomEl = function() {

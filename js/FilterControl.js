@@ -11,7 +11,7 @@ function FilterControl(id, context, pubsub, socket, toggleId, type, cutoff) {
   this.toggleId = toggleId;
   this.type = type;
   this.cutoffFrequency = cutoff;
-  this.domEl = null;
+  this.domEl = document.getElementById(this.id);
   this.node = null;
   this.toggleEl = null;
   this.isEnabled = false;
@@ -25,7 +25,6 @@ function FilterControl(id, context, pubsub, socket, toggleId, type, cutoff) {
  */
 FilterControl.prototype.init = function(node) {
   this.knob.init();
-  this.setDomEl();
   this._setToggleEl();
   this._setIsEnabled();
   this._setNode(node);
@@ -33,15 +32,6 @@ FilterControl.prototype.init = function(node) {
   this._setCutoffFrequency(this.cutoffFrequency);
   this._handleEvents();
   this._handleIO();
-  return this;
-}
-
-/**
- * Set the FilterControl instance dom element reference
- * @return this
- */
-FilterControl.prototype.setDomEl = function() {
-  this.domEl = document.getElementById(this.id);
   return this;
 }
 

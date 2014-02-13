@@ -34,7 +34,7 @@ function Knob(id, pubsub, rangeMax, initMax) {
    * dom element reference
    * @member {object}
    */
-  this.domEl = null;
+  this.domEl = document.getElementById(this.id);
 
   /**
    * Save the starting position of the drag
@@ -74,7 +74,6 @@ function Knob(id, pubsub, rangeMax, initMax) {
 }
 
 Knob.prototype.init = function() {
-  this.setDomEl();
   this._handleEvents();
 
   if (this.initMax) {
@@ -90,15 +89,6 @@ Knob.prototype.init = function() {
 Knob.prototype.turn = function(value) {
   this.domEl.style.webkitTransform = 'rotate(' + value + 'deg)';
   this.domEl.style.transform = 'rotate(' + value + 'deg)';
-  return this;
-}
-
-/**
- * Set the Knob instance dom element reference
- * @return this
- */
-Knob.prototype.setDomEl = function() {
-  this.domEl = document.getElementById(this.id);
   return this;
 }
 
