@@ -6,6 +6,8 @@ function Tempo(id, pubsub) {
   this.pubsub = pubsub;
   this.domEl = document.getElementById(this.id);
   this.tempo = 120.0;
+  this.tempoMin = 0;
+  this.tempoMax = 240.0;
   this.decreaseId = 'tempo-decrease';
   this.increaseId = 'tempo-increase';
   this.bpmId = 'bpm';
@@ -33,11 +35,11 @@ Tempo.prototype.getTempo = function() {
  * @return this
  */
 Tempo.prototype.setTempo = function(tempo) {
-  if (tempo < 0) {
-    tempo = 0;
+  if (tempo < this.tempoMin) {
+    tempo = this.tempoMin;
   }
-  if (tempo > 240) {
-    tempo = 240;
+  if (tempo > this.tempoMax) {
+    tempo = this.tempoMax;
   }
   this.tempo = tempo;
 
@@ -50,7 +52,7 @@ Tempo.prototype.setTempo = function(tempo) {
  * Update ui with current tempo value
  */
 Tempo.prototype.updateBpm = function() {
-  document.getElementById(this.bpmId).innerText = this.tempo;
+  document.getElementById(this.bpmId).textContent = this.tempo;
 }
 
 /**
