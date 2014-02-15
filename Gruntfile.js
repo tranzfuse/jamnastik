@@ -31,4 +31,5 @@ module.exports = function(grunt) {
 
   grunt.registerTask('default', ['browserify', 'sass']);
   grunt.registerTask('dev', ['watch']);
+  grunt.registerTask('heroku', ['browserify', 'sass']);
 };

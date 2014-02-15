@@ -4,7 +4,7 @@ var j5 = require('johnny-five'),
   app = express(),
   server = require('http').createServer(app),
   io = require('socket.io').listen(server),
-  port = 4567;
+  port = process.env.PORT || 4567;
 
 var controllerAttached = false;
 
