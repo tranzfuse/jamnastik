@@ -2,7 +2,7 @@
   "name": "audiohack",
   "version": "0.0.1",
   "engine": {
-    "node": "0.10.x"
+    "node": "0.10.13"
   },
   "description": "A hack week project to learn about the web audio api and arduino.",
   "main": "bundle.js",
