@@ -27,6 +27,6 @@
     "johnny-five": "~0.7.15"
   },
   "scripts": {
-    "postinstall": "./node_modules/grunt/bin/grunt heroku"
+    "postinstall": "grunt heroku"
   }
 }
