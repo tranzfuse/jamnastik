@@ -11,6 +11,7 @@ var BufferLoader = require('./BufferLoader');
 var Sample = require('./Sample');
 var Tempo = require('./Tempo');
 var ControlPanel = require('./ControlPanel');
+var Save = require('./Save');
 
 // Sort out the AudioContext
 window.AudioContext = window.AudioContext ||
@@ -38,6 +39,7 @@ function App() {
   this.tempo = null;
   this.controlPanel = null;
   this.pubsub = null;
+  this.save = null;
 }
 
 /**
@@ -67,6 +69,7 @@ App.prototype.init = function() {
       this.sampleUrls,
       callback
     );
+    this.save = new Save('save', this.filterControl, this.qControl, this.gainControl, this.tempo, this.stepSequencer);
 
     this.bufferLoader.load();
   } else {
@@ -94,6 +97,7 @@ App.prototype.callbackLoaded = function(bufferList) {
   this.createSamples();
   this.stepSequencer.init(this.samples);
   this.scheduler.init(this.stepSequencer);
+  this.save.init();
   this._handleIO();
 }
 

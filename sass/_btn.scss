@@ -1,0 +1,21 @@
+.btn {
+  background-color: $btn-color;
+  border: $btn-border-width solid transparent;
+  border-radius: $border-radius;
+  color: $white;
+  font: inherit;
+  font-weight: 400;
+  margin: 0;
+  padding: ($btn-padding / 2) $btn-padding;
+  transition: all .2s ease;
+
+  &:focus {
+    border-color: $blue-dark;
+    outline: 0;
+  }
+
+  &:hover {
+    background-color: $btn-color-hover;
+    border-color: $btn-border-color-hover;
+  }
+}
