@@ -21,7 +21,7 @@ GainControl.prototype.init = function(node) {
   this.knob.init();
   this._setNode(node);
   this._handleEvents();
-  this._handleIO();
+  //this._handleIO();
   return this;
 }
 

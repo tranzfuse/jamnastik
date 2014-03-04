@@ -91,7 +91,7 @@ FilterControl.prototype.init = function(node) {
   this._setFilterType(this.type);
   this._setCutoffFrequency(this.cutoffFrequency);
   this._handleEvents();
-  this._handleIO();
+  //this._handleIO();
   return this;
 }
 

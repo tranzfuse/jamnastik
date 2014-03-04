@@ -49,7 +49,7 @@ App.prototype.init = function() {
     callback = this.callbackLoaded.bind(this);
 
   if (window.AudioContext) {
-    this.socket = io.connect('http://localhost');
+    this.socket = null;
     this.pubsub = new EventEmitter();
     this.pubsub.setMaxListeners(0);
     this.context = new AudioContext();
@@ -94,7 +94,7 @@ App.prototype.callbackLoaded = function(bufferList) {
   this.createSamples();
   this.stepSequencer.init(this.samples);
   this.scheduler.init(this.stepSequencer);
-  this._handleIO();
+  //this._handleIO();
 }
 
 /**
