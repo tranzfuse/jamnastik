@@ -1,0 +1,47 @@
+#control-panel {
+  background-color: $control-panel-bg-color;
+  border-radius: 0 $border-radius $border-radius 0;
+  position: fixed;
+  left: $control-panel-closed-width; //control-panel is closed at wider screen widths
+  top: $control-panel-margin * 2;
+  padding: $control-panel-padding;
+  padding-left: 0;
+  transition: left .3s ease-in-out;
+
+  //control-panel is open at wider screen widths
+  @media (min-width: 70em) {
+    left: 0;
+  }
+
+  //control panel can also be opened when the title is clicked
+  &.open {
+    left: 0;
+  }
+
+  //control panel can also be closed when the title is clicked
+  &.closed {
+    left: $control-panel-closed-width;
+  }
+
+  .controls {
+    margin-bottom: $control-panel-margin;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+#control-panel-title {
+  background-color: $control-panel-bg-color;
+  border: $control-panel-border-width solid $control-panel-border-color;
+  border-bottom: 0;
+  border-radius: $border-radius $border-radius 0 0;
+  color: #FFF;
+  padding: .25em .5em;
+  position: absolute;
+  right: -4.25em;
+  top: 4.5em;
+  -webkit-transform: rotate(90deg);
+  transform: rotate(90deg);
+}
