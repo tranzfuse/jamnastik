@@ -19,6 +19,9 @@
 .glyphicon:empty {
   width: 1em;
 }
+.glyphicon-unchecked:before {
+  content: "\e157";
+}
 .glyphicon-plus:before {
   content: "\2b";
 }
