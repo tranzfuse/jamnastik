@@ -69,7 +69,7 @@ App.prototype.init = function() {
       this.sampleUrls,
       callback
     );
-    this.save = new Save('save', this.filterControl, this.qControl, this.gainControl, this.tempo, this.stepSequencer);
+    this.save = new Save('save', this.pubsub, this.filterControl, this.qControl, this.gainControl, this.tempo, this.stepSequencer);
 
     this.bufferLoader.load();
   } else {
@@ -93,11 +93,12 @@ App.prototype.callbackLoaded = function(bufferList) {
   this.qControl.init(this.filterControl.node);
   this.transport.init();
   this.tempo.init();
+  this.save.init();
 
   this.createSamples();
   this.stepSequencer.init(this.samples);
   this.scheduler.init(this.stepSequencer);
-  this.save.init();
+
   this._handleIO();
 }
 
@@ -141,8 +142,7 @@ App.prototype.setBufferList = function(bufferList) {
 }
 
 /**
- * Fired when the init method is called and app is successfully
- * bootstrapped
+ * Fired when the init method is called and app is successfully bootstrapped
  *
  * @event
  * @name app:loaded

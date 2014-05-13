@@ -69,7 +69,7 @@ function StepSequencer(id, context, pubsub, scheduler, socket) {
 
   /**
    * A map of pad instances. The pad instance's dom element
-   * id is key, pad instance is the key. This map of pads
+   * id is key, pad instance is the value. This map of pads
    * exists as arrays within the grid array property.
    */
   this.pads = {};
@@ -198,6 +198,18 @@ StepSequencer.prototype.play = function (time) {
  */
 StepSequencer.prototype.pause = function() {
   window.clearTimeout(this.scheduler.timerID);
+}
+
+/**
+ * Which pads are currently disabled/enabled?
+ * @return object
+ */
+StepSequencer.prototype.getSequence = function() {
+  var seq = {};
+  for (var pad in this.pads) {
+    seq[pad] = this.pads[pad].enabled;
+  }
+  return seq;
 }
 
 /**

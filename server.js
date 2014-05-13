@@ -4,6 +4,8 @@ var j5 = require('johnny-five'),
   server = require('http').createServer(app),
   io = require('socket.io').listen(server),
   utils = require('./js/utils'),
+  fs = require('fs'),
+  crypto = require('crypto'),
   port = process.env.PORT || 4567;
 
 var isArduinoConnected = false;
@@ -21,6 +23,51 @@ app.use(express.static(__dirname + '/public'));
 // app routes
 app.get('/', function (req, res) {
   res.sendfile(__dirname + '/public/index.html');
+});
+
+app.post('/save', function (req, res) {
+  var buffer = '',
+    filePath = 'saved/',
+    fileName,
+    md5 = crypto.createHash('md5');
+
+  req.on('data', function (chunk) {
+    buffer += chunk;
+    md5.update(buffer);
+  });
+
+  req.on('end', function () {
+    var checksum = md5.digest('hex'),
+      response = {
+        buffer: buffer,
+        hash: checksum
+      };
+
+    //create file name based on checksum
+    fileName = checksum + '.json';
+
+    //does this file already exist?
+    fs.open(filePath + fileName, 'r', function(err, fd) {
+      if (err) {
+        console.log('file not found, write to disk.');
+        console.log(response);
+
+        //save to disk
+        saveFile(filePath + fileName, response);
+      }
+      //file was found, nothing to write
+      res.json(response);
+    });
+
+    function saveFile(file, response) {
+      fs.writeFile(file, buffer, function (err) {
+        console.log('Created file: ' + fileName);
+        res.json(response);
+      });
+    }
+
+  });
+
 });
 
 // manage websockets events
