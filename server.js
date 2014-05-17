@@ -25,6 +25,21 @@ app.get('/', function (req, res) {
   res.sendfile(__dirname + '/public/index.html');
 });
 
+app.get('/jam/:checksum', function (req, res) {
+  var filePath = 'saved/',
+    fileName = req.params.checksum + '.json';
+
+  fs.readFile(filePath + fileName, {'encoding': 'utf-8', 'flag': 'r'}, function(err, data) {
+    if (err) {
+      //maybe show some better messaging?
+      console.log('File ', fileName, ' not found.');
+      res.redirect('/');
+    }
+    console.log(data);
+    res.send(data);
+  });
+});
+
 app.post('/save', function (req, res) {
   var buffer = '',
     filePath = 'saved/',
