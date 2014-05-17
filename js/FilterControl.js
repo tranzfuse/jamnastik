@@ -190,7 +190,7 @@ FilterControl.prototype._handleIO = function() {
 
   this.socket.emit('control:filter:loaded');
 
-  this.socket.on('j5:button1:down', function() {
+  this.socket.on('j5:buttonFilter:down', function() {
     self.toggleFilter();
   });
 

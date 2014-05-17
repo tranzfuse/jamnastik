@@ -3,3 +3,12 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: $font-weight;
   margin: 0 0 .5em;
 }
+
+#title {
+  background-color: $control-panel-bg-color;
+  color: #FFF;
+  padding: .25em .5em;
+  position: absolute;
+  top: 0;
+  right: 0;
+}
