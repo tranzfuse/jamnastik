@@ -22,7 +22,7 @@ $border-color: $gray-dark;
 $border-radius: 5px;
 
 
-// audiohack (Stupid name)
+// Jamnastik
 // -----------------------------------
 
 // Knobs
@@ -69,16 +69,10 @@ $step-sequencer-bg-color: $white;
 $step-sequencer-border-color: $border-color;
 $step-sequencer-border-width: $border-width;
 $step-sequencer-padding: 2em;
-$step-sequencer-width: ($pad-width + $pad-margin) * $pads-per-row + ($step-sequencer-padding * 2) + $step-sequencer-border-width - $pad-margin;
+$step-sequencer-width: ($step-sequencer-border-width * 2) + ($pad-width + $pad-margin) * $pads-per-row + ($step-sequencer-padding * 2) + $step-sequencer-border-width - $pad-margin;
 
 // Transport
 $transport-border-color: $border-color;
 $transport-border-width: $border-width;
 $transport-padding: 2em;
 $transport-width: $control-panel-width;
-
-// audiohack
-$audiohack-border-width: $border-width;
-$audiohack-border-color: $border-color;
-$audiohack-margin: 2em;
-$audiohack-width: $step-sequencer-width + ($audiohack-border-width * 2);

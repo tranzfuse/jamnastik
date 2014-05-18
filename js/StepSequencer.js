@@ -3,7 +3,7 @@ var Pad = require('./Pad');
 /**
  * @constructor
  */
-function StepSequencer(id, context, pubsub, scheduler, socket) {
+function StepSequencer(id, context, pubsub, scheduler, socket, title) {
 
   /**
    * The step sequencer html element's id
@@ -78,6 +78,16 @@ function StepSequencer(id, context, pubsub, scheduler, socket) {
    * The grid's active row css class
    */
   this.rowActiveClass = 'active';
+
+  /**
+   * The displayed tabbed title
+   */
+  this.title = title;
+
+  /**
+   * Is this the active step sequencer?
+   */
+  this.isActive = true;
 }
 
 /**
@@ -86,9 +96,22 @@ function StepSequencer(id, context, pubsub, scheduler, socket) {
  */
 StepSequencer.prototype.init = function(samples) {
   this.samples = samples;
+  this._addTitle();
   this._setupGrid();
   this._handleEvents();
   this._handleIO();
+  return this;
+}
+
+/**
+ * Create title html element and append it to parent
+ * @return this
+ */
+StepSequencer.prototype._addTitle = function() {
+  var title = document.createElement('h2');
+  title.classList.add('title', 'step-sequencer-title', 'active');
+  title.innerText = this.title;
+  this.domEl.appendChild(title);
   return this;
 }
 
