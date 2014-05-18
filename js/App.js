@@ -102,7 +102,7 @@ App.prototype.callbackLoaded = function(bufferList) {
  */
 App.prototype.handleNoSupport = function() {
   body = document.getElementsByTagName('body');
-  body[0].innerHTML('<h1>Aww snap! This browser does not support the Web Audio API.</h1>');
+  body[0].innerHTML = '<h1>Aww snap! This browser does not support the Web Audio API.</h1>';
 }
 
 /**

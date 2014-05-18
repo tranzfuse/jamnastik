@@ -87,7 +87,7 @@ function StepSequencer(id, context, pubsub, scheduler, socket, title) {
   /**
    * Is this the active step sequencer?
    */
-  this.isActive = true;
+  this.isActiveSequencer = true;
 }
 
 /**
@@ -110,7 +110,7 @@ StepSequencer.prototype.init = function(samples) {
 StepSequencer.prototype._addTitle = function() {
   var title = document.createElement('h2');
   title.classList.add('title', 'step-sequencer-title', 'active');
-  title.innerText = this.title;
+  title.textContent = this.title;
   this.domEl.appendChild(title);
   return this;
 }
