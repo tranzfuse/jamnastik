@@ -34,6 +34,20 @@ ControlPanel.prototype._handleEvents = function() {
 
   }, false);
 
+  // key press
+  window.addEventListener('keydown', function(e) {
+
+    // 67 = c
+    if (67 === e.which) {
+      if (self.isClosed) {
+        self.open();
+      } else {
+        self.close();
+      }
+    }
+
+  }, false);
+
   this._handleResize();
 }
 
