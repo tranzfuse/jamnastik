@@ -1,9 +1,27 @@
-#step-sequencer {
+.step-sequencer {
   @extend .cf;
   background-color: $step-sequencer-bg-color;
+  border: $step-sequencer-border-width solid $step-sequencer-border-color;
   border-radius: $border-radius;
+  margin: 0 auto;
   padding: $step-sequencer-padding;
+  position: relative;
   width: $step-sequencer-width;
+
+  .title {
+    border: 1px solid #999;
+    border-radius: 5px 5px 0 0;
+    position: absolute;
+    top: 2em;
+    padding: .25em;
+    -webkit-transform: rotate(90deg);
+    transform: rotate(90deg);
+    right: -2.65em;
+
+    &.active {
+      border-bottom-color: $white;
+    }
+  }
 }
 
 .step-row {
