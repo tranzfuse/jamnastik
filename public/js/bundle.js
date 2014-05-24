@@ -1,1766 +1,4 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var util = require('util');
-var EventEmitter = require('events').EventEmitter;
-var sampleUrls = require('./sampleUrls');
-var Scheduler = require('./Scheduler');
-var StepSequencer = require('./StepSequencer');
-var Transport = require('./Transport');
-var GainControl = require('./GainControl');
-var FilterControl = require('./FilterControl');
-var QControl = require('./QControl');
-var BufferLoader = require('./BufferLoader');
-var Sample = require('./Sample');
-var Tempo = require('./Tempo');
-var ControlPanel = require('./ControlPanel');
-
-// Sort out the AudioContext
-window.AudioContext = window.AudioContext ||
-  window.webkitAudioContext ||
-  window.mozAudioContext ||
-  window.oAudioContext ||
-  window.msAudioContext;
-
-/**
- * @constructor
- */
-function App() {
-  this.socket = null;
-  this.context = null;
-  this.bufferLoader = null;
-  this.bufferList = null;
-  this.scheduler = null;
-  this.stepSequencer = null;
-  this.transport = null;
-  this.gainControl = null;
-  this.filterControl = null;
-  this.qControl = null;
-  this.sampleUrls = null;
-  this.samples = [];
-  this.tempo = null;
-  this.controlPanel = null;
-  this.pubsub = null;
-}
-
-/**
- * Bootstrap the app
- * @return this
- */
-App.prototype.init = function() {
-  var body,
-    callback = this.callbackLoaded.bind(this);
-
-  if (window.AudioContext) {
-    this.socket = io.connect('http://localhost');
-    this.pubsub = new EventEmitter();
-    this.pubsub.setMaxListeners(0);
-    this.context = new AudioContext();
-    this.tempo = new Tempo('tempo', this.pubsub);
-    this.controlPanel = new ControlPanel('control-panel', 'control-panel-title', this.pubsub);
-    this.scheduler = new Scheduler(this.context, this.pubsub, this.tempo.tempo);
-    this.stepSequencer = new StepSequencer('step-sequencer', this.context, this.pubsub, this.scheduler, this.socket, 'Drums');
-    this.transport = new Transport('transport', 'play', 'pause', this.context, this.pubsub);
-    this.gainControl = new GainControl('gain-control', this.socket, this.pubsub);
-    this.filterControl = new FilterControl('filter-control', this.context, this.pubsub, this.socket, 'filter-toggle', 'lowpass', 440);
-    this.qControl = new QControl('q-control', this.socket, this.pubsub);
-    this.sampleUrls = sampleUrls;
-    this.bufferLoader = new BufferLoader(
-      this.context,
-      this.sampleUrls,
-      callback
-    );
-
-    this.bufferLoader.load();
-  } else {
-    this.handleNoSupport();
-  }
-
-  return this;
-}
-
-/**
- * Callback passed as a parameter to the BufferLoader instance
- * @param bufferList {array}
- */
-App.prototype.callbackLoaded = function(bufferList) {
-  this.setBufferList(bufferList);
-
-  // @TODO manage all the controls within a ControlPanel instance
-  this.controlPanel.init();
-  this.gainControl.init(this.context.createGain());
-  this.filterControl.init(this.context.createBiquadFilter());
-  this.qControl.init(this.filterControl.node);
-  this.transport.init();
-  this.tempo.init();
-
-  this.createSamples();
-  this.stepSequencer.init(this.samples);
-  this.scheduler.init(this.stepSequencer);
-  this._handleIO();
-}
-
-/**
- * Tell user to use a better browser.
- */
-App.prototype.handleNoSupport = function() {
-  body = document.getElementsByTagName('body');
-  body[0].innerHTML = '<h1>Aww snap! This browser does not support the Web Audio API.</h1>';
-}
-
-/**
- *  Handle websockets events and communication
- */
-App.prototype._handleIO = function() {
-  var self = this;
-
-  this.socket.emit('app:loaded');
-}
-
-/**
- *  Errr, umm, create the sample instances
- * @return this
- */
-App.prototype.createSamples = function() {
-  for (var i = 0; i < this.bufferList.length; i++) {
-    this.samples[i] = new Sample(this.context, this.pubsub, this.filterControl.node, this.gainControl.node, this.sampleUrls[i], this.bufferList[i]);
-    this.samples[i].init(this.filterControl.isEnabled);
-  }
-  return this;
-}
-
-/**
- * Set bufferList property
- * @param bufferList {array}
- * @return this
- */
-App.prototype.setBufferList = function(bufferList) {
-  this.bufferList = bufferList;
-  return this;
-}
-
-/**
- * Fired when the init method is called and app is successfully
- * bootstrapped
- *
- * @event
- * @name app:loaded
- * @memberOf App
- */
-
-module.exports = App;
-
-},{"./BufferLoader":2,"./ControlPanel":3,"./FilterControl":4,"./GainControl":5,"./QControl":8,"./Sample":9,"./Scheduler":10,"./StepSequencer":11,"./Tempo":12,"./Transport":13,"./sampleUrls":16,"events":18,"util":22}],2:[function(require,module,exports){
-// Borrowed with gratitude from:
-// http://www.html5rocks.com/en/tutorials/webaudio/intro/
-function BufferLoader(context, urlList, callback) {
-  this.context = context;
-  this.urlList = urlList;
-  this.onload = callback;
-  this.bufferList = new Array();
-  this.loadCount = 0;
-}
-
-BufferLoader.prototype.loadBuffer = function(url, index) {
-  // Load buffer asynchronously
-  var request = new XMLHttpRequest();
-  request.open("GET", url, true);
-  request.responseType = "arraybuffer";
-
-  var loader = this;
-
-  request.onload = function() {
-    // Asynchronously decode the audio file data in request.response
-    loader.context.decodeAudioData(
-      request.response,
-      function(buffer) {
-        if (!buffer) {
-          alert('error decoding file data: ' + url);
-          return;
-        }
-        loader.bufferList[index] = buffer;
-        if (++loader.loadCount == loader.urlList.length)
-          loader.onload(loader.bufferList);
-      },
-      function(error) {
-        console.error('decodeAudioData error', error);
-      }
-    );
-  }
-
-  request.onerror = function() {
-    alert('BufferLoader: XHR error');
-  }
-
-  request.send();
-}
-
-BufferLoader.prototype.load = function() {
-  for (var i = 0; i < this.urlList.length; ++i) {
-  	this.loadBuffer(this.urlList[i], i);
-  }
-}
-
-module.exports = BufferLoader;
-
-},{}],3:[function(require,module,exports){
-function ControlPanel(id, titleId, pubsub) {
-  this.id = id;
-  this.titleId = titleId;
-  this.domEl = document.getElementById(this.id);
-  this.titleDomEl = null;
-  this.isOpen = true;
-  this.isClosed = false;
-  this.openClass = 'open';
-  this.closedClass = 'closed';
-}
-
-ControlPanel.prototype.init = function() {
-  this.setTitleDomEl();
-  this._handleEvents();
-}
-
-ControlPanel.prototype.setTitleDomEl = function() {
-  this.titleDomEl = document.getElementById(this.titleId);
-  return this;
-}
-
-ControlPanel.prototype._handleEvents = function() {
-  var self = this;
-
-
-  // click
-  this.titleDomEl.addEventListener('click', function(e) {
-
-    if (self.isClosed) {
-      self.open();
-    } else {
-      self.close();
-    }
-
-  }, false);
-
-  // key press
-  window.addEventListener('keydown', function(e) {
-
-    // 67 = c
-    if (67 === e.which) {
-      if (self.isClosed) {
-        self.open();
-      } else {
-        self.close();
-      }
-    }
-
-  }, false);
-
-  this._handleResize();
-}
-
-ControlPanel.prototype._handleResize = function() {
-  var mql = window.matchMedia('(min-width: 70em)');
-  mql.addListener(this._handleMql.bind(this));
-  this._handleMql(mql);
-}
-
-ControlPanel.prototype._handleMql = function(mql) {
-  if (mql.matches) {
-    //viewport is wider than 70em
-    this.open();
-  } else {
-    // viewport is less than 70em
-    this.close();
-  }
-}
-
-ControlPanel.prototype.open = function() {
-  this.isOpen = true;
-  this.isClosed = false;
-  this.domEl.classList.remove(this.closedClass);
-  this.domEl.classList.add(this.openClass);
-}
-
-ControlPanel.prototype.close = function() {
-  this.isOpen = false;
-  this.isClosed = true;
-  this.domEl.classList.add(this.closedClass);
-  this.domEl.classList.remove(this.openClass);
-}
-
-module.exports = ControlPanel;
-
-},{}],4:[function(require,module,exports){
-var Knob = require('./Knob');
-
-/**
- * @constructor
- * Manages a filter ui control and the audio context filter node
- */
-function FilterControl(id, context, pubsub, socket, toggleId, type, cutoff) {
-
-  /**
-   * Hidden html range input id
-   * @property {string}
-   */
-  this.id = id;
-
-  /**
-   * The audio context instance
-   * @property {object}
-   */
-  this.context = context;
-
-  /**
-   * the pubsub instance
-   * @property {object}
-   */
-  this.pubsub = pubsub;
-
-  /**
-   * the websocket instance
-   * @property {object}
-   */
-  this.socket = socket;
-
-  /**
-   * Html checkbox id
-   * @property {string}
-   */
-  this.toggleId = toggleId;
-
-  /**
-   * filter type (lowpass, hipass, etc)
-   * @property {string}
-   */
-  this.type = type;
-
-  /**
-   * filter cutoff frequency value
-   * @property {number}
-   */
-  this.cutoffFrequency = cutoff;
-
-  /**
-   * Hidden html range input dom reference
-   * @property {object}
-   */
-  this.domEl = document.getElementById(this.id);
-
-  /**
-   * filter node instance
-   * @property {object}
-   */
-  this.node = null;
-
-  /**
-   * html checkbox dom reference
-   * @property {object}
-   */
-  this.toggleEl = document.getElementById(this.toggleId);
-
-  /**
-   * Is the filter currently enabled?
-   * @property {boolean}
-   */
-  this.isEnabled = false;
-
-  /**
-   * instance of the Knob class
-   * @property {object}
-   */
-  this.knob = new Knob('filter-knob', this.pubsub, 1);
-}
-
-/**
- * Init setup the instance
- * @param node {object} instance of context.createBiquadFilterNode()
- * @return this
- */
-FilterControl.prototype.init = function(node) {
-  this.knob.init();
-  this._setIsEnabled();
-  this._setNode(node);
-  this._setFilterType(this.type);
-  this._setCutoffFrequency(this.cutoffFrequency);
-  this._handleEvents();
-  this._handleIO();
-  return this;
-}
-
-/**
- * Sets the biquadfilternode instances filter type
- * @private
- * @param type {string} filter type per the webaudio BiQuadFilter w3c spec:
- *  http://www.w3.org/TR/webaudio/#BiquadFilterNode-section
- * @return this
- */
-FilterControl.prototype._setFilterType = function(type) {
-  if (this.node === null) {
-    throw new ReferenceError('FilterControl.node is not defined', 'FilterControl');
-  }
-  this.node.type = type || 'lowpass';
-  return this;
-}
-
-/**
- * Sets the biquadfilternode instances frequency cutoff value
- * @private
- * @param frequency {number} the cutoff frequency value (in Hz)
- * @return this
- */
-FilterControl.prototype._setCutoffFrequency = function(frequency) {
-  if (this.node === null) {
-    throw new ReferenceError('FilterControl.node is not defined', 'FilterControl');
-  }
-  this.node.frequency.value = frequency || 440;
-}
-
-/**
- * Sets the isEnabled property
- * @private
- */
-FilterControl.prototype._setIsEnabled = function() {
-  this.isEnabled = (this.toggleEl !== null) ? this.toggleEl.checked : false;
-}
-
-/**
- * Set node property
- * @private
- * @param node {object} instance of context.createFilterNode()
- * @return this
- */
-FilterControl.prototype._setNode = function(node) {
-  this.node = node;
-  return this;
-}
-
-// Again, borrowed with gratitude from:
-// http://www.html5rocks.com/en/tutorials/webaudio/intro/js/filter-sample.js
-FilterControl.prototype.changeFilter = function(element) {
-  // Clamp the frequency between the minimum value (40 Hz) and half of the
-  // sampling rate.
-  var minValue = 40;
-  var maxValue = this.context.sampleRate / 2;
-  // Logarithm (base 2) to compute how many octaves fall in the range.
-  var numberOfOctaves = Math.log(maxValue / minValue) / Math.LN2;
-  // Compute a multiplier from 0 to 1 based on an exponential scale.
-  var multiplier = Math.pow(2, numberOfOctaves * (element.value - 1.0));
-  // Get back to the frequency value between min and max.
-  this.node.frequency.value = maxValue * multiplier;
-}
-
-/**
- * Bind listeners to events
- * @private
- */
-FilterControl.prototype._handleEvents = function() {
-  var self = this;
-
-  //input
-  this.domEl.addEventListener('input', function(e) {
-    self.changeFilter(e.target);
-  }, false);
-
-  //click
-  this.toggleEl.addEventListener('click', function(e) {
-    self.isEnabled = self.toggleEl.checked;
-    self.pubsub.emit('filter:enabled:' + self.isEnabled);
-  }, false);
-
-  //custom
-  this.pubsub.on(self.knob.eventName, function(data) {
-    self.setInputRangeValue(data.value);
-    self.changeFilter(self.domEl);
-  });
-}
-
-/**
- * Handle websockets events and communication
- */
-FilterControl.prototype._handleIO = function() {
-  var self = this;
-
-  this.socket.emit('control:filter:loaded');
-
-  this.socket.on('j5:buttonFilter:down', function() {
-    self.toggleFilter();
-  });
-
-  this.socket.on('j5:potFilter:read', function(data) {
-    self._updateKnob(data);
-  });
-}
-
-/**
- * Handle filter checkbox checked status; emit a corresponding event
- */
-FilterControl.prototype.toggleFilter = function() {
-  this.isEnabled = !this.isEnabled;
-  this.toggleEl.checked = this.isEnabled;
-  this.pubsub.emit('filter:enabled:' + this.isEnabled);
-}
-
-/**
- * Update filter ui knob value and rotate it as incoming
- * data is received from arduino controller
- * @private
- * @param data {object} The incoming data stream from websockets
- */
-FilterControl.prototype._updateKnob = function(data) {
-  this.setInputRangeValue(data.calculated);
-  this.changeFilter(this.domEl);
-  this.knob.turn(Math.floor(data.knob));
-}
-
-/**
- * Set the filter's html input range value
- * @param data {number}
- */
-FilterControl.prototype.setInputRangeValue = function(data) {
-  this.domEl.value = data;
-}
-
-/**
- * Fired when the filter checkbox is checked
- *
- * @event
- * @name filter:enabled:true
- * @memberOf FilterControl
- */
-
-/**
- * Fired when the filter checkbox is unchecked
- *
- * @event
- * @name filter:enabled:false
- * @memberOf FilterControl
- */
-
-
-/**
- * Fired when the init method is called
- *
- * @event
- * @name control:filter:loaded
- * @memberOf FilterControl
- */
-
-module.exports = FilterControl;
-
-},{"./Knob":6}],5:[function(require,module,exports){
-var Knob = require('./Knob');
-
-/**
- * @constructor
- */
-function GainControl(id, socket, pubsub) {
-  this.id = id;
-  this.socket = socket;
-  this.pubsub = pubsub;
-  this.domEl = document.getElementById(this.id);
-  this.node = null;
-  this.knob = new Knob('gain-knob', this.pubsub, 100, true);
-}
-
-/**
- * Iinit setup the instance
- * @param node {object} instance of context.createGainNode()
- * @return this
- */
-GainControl.prototype.init = function(node) {
-  this.knob.init();
-  this._setNode(node);
-  this._handleEvents();
-  this._handleIO();
-  return this;
-}
-
-/**
- * Set node property
- * @param node {object} instance of context.createGainNode()
- * @return this
- */
-GainControl.prototype._setNode = function(node) {
-  this.node = node;
-  return this;
-}
-
-// Again, borrowed with gratitude from:
-// http://www.html5rocks.com/en/tutorials/webaudio/intro/js/volume-sample.js
-GainControl.prototype.changeGain = function(element) {
-  var volume = element.value;
-  var fraction = parseInt(element.value) / parseInt(element.max);
-  // Let's use an x*x curve (x-squared) since simple linear (x) does not sound as good.
-  this.node.gain.value = fraction * fraction;
-}
-
-/**
- * Bind listeners to events
- * @private
- * @return undefined
- */
-GainControl.prototype._handleEvents = function() {
-  var self = this;
-
-  //input
-  this.domEl.addEventListener('input', function(e) {
-    self.changeGain(e.target);
-  }, false);
-
-  //custom
-  this.pubsub.on(self.knob.eventName, function(data) {
-    self.setInputRangeValue(data.value);
-    self.changeGain(self.domEl);
-  });
-}
-
-/**
- * Handle websockets events
- */
-GainControl.prototype._handleIO = function() {
-  var self = this,
-    gainKnob = document.getElementById('gain-knob');
-
-  this.socket.emit('control:gain:loaded');
-
-  this.socket.on('j5:potGain:read', function(data) {
-    self._updateKnob(data);
-  });
-}
-
-/**
- * Set the gain's html input range value
- * @param data {number}
- */
-GainControl.prototype.setInputRangeValue = function(data) {
-  this.domEl.value = data;
-}
-
-/**
- * Update ui knob value and rotate it as incoming
- * data is received from arduino controller
- * @private
- * @param data {object} The incoming data stream from websockets
- */
-GainControl.prototype._updateKnob = function(data) {
-  this.setInputRangeValue(data.calculated);
-  this.changeGain(this.domEl);
-  this.knob.turn(Math.floor(data.knob));
-}
-
-/**
- * Fired when the init method is called
- *
- * @event
- * @name control:gain:loaded
- * @memberOf GainControl
- */
-
-module.exports = GainControl;
-
-},{"./Knob":6}],6:[function(require,module,exports){
-var dom = require('./dom');
-var utils = require('./utils');
-
-/**
- * Borrowed the general concept and math from
- * https://github.com/martinaglv/KnobKnob/blob/master/knobKnob/knobKnob.jquery.js
- * @constructor
- */
-function Knob(id, pubsub, rangeMax, initMax) {
-
-  /**
-   * dom element id
-   */
-  this.id = id;
-
-  /**
-   * The pubsub instance
-   */
-  this.pubsub = pubsub;
-
-  /**
-   * The html input range max value for the knob control
-   * @member {number}
-   */
-  this.rangeMax = rangeMax;
-
-  /**
-   * Dynamically named event emitted on mouse events
-   * @member {string}
-   */
-  this.eventName = this.id + ':turn';
-
-  /**
-   * dom element reference
-   * @member {object}
-   */
-  this.domEl = document.getElementById(this.id);
-
-  /**
-   * Save the starting position of the drag
-   * @member {number}
-   */
-  this.startDeg = -1;
-
-  /**
-   * Keep track of the current degree the knob is turned to
-   * @member {number}
-   */
-  this.currentDeg = 0;
-
-  /**
-   * Store the current degree the knob is turned to on mouseup
-   * @member {number}
-   */
-  this.rotation = 0;
-
-  /**
-   * The last degree the knob was turned to
-   * @member {number}
-   */
-  this.lastDeg = 0;
-
-  /**
-   * Maximum degree the knob should be turned
-   * @member {number}
-   */
-  this.maxDeg = 270;
-
-  /**
-   * Should the knob be turned to the maxDeg on initialization
-   * @member {boolean}
-   */
-  this.initMax = initMax;
-}
-
-Knob.prototype.init = function() {
-  this._handleEvents();
-
-  if (this.initMax) {
-    this.rotation = this.lastDeg = this.currentDeg = this.maxDeg;
-    this.turn(this.maxDeg);
-  }
-}
-
-/**
- * Rotate the knob dom element
- * @return this
- */
-Knob.prototype.turn = function(value) {
-  this.domEl.style.webkitTransform = 'rotate(' + value + 'deg)';
-  this.domEl.style.transform = 'rotate(' + value + 'deg)';
-  return this;
-}
-
-//@TODO Add touch support
-Knob.prototype._handleEvents = function() {
-  var self = this;
-
-  //mousedown, touchstart
-  this.domEl.addEventListener('mousedown', function(e) {
-
-    e.preventDefault();
-
-    var offset = dom.getOffset(self.domEl);
-
-    var center = {
-      y: offset.top + dom.getHeight(self.domEl) / 2,
-      x: offset.left + dom.getWidth(self.domEl) / 2
-    };
-
-    var a, b, deg, tmp;
-
-    var rad2deg = 180 / Math.PI;
-
-    var handleMousemove = function(e) {
-
-      //e = (e.touches) ? e.touches[0] : e;
-
-      a = center.y - e.pageY;
-      b = center.x - e.pageX;
-      deg = Math.atan2(a, b) * rad2deg;
-
-      // we have to make sure that negative
-      // angles are turned into positive:
-      if (deg < 0) {
-          deg = self.maxDeg + deg;
-      }
-
-      // Save the starting position of the drag
-      if (self.startDeg === -1) {
-          self.startDeg = deg;
-      }
-
-      // Calculating the current rotation
-      tmp = Math.floor((deg - self.startDeg) + self.rotation);
-
-      // Making sure the current rotation
-      // stays between 0 and (this.maxDeg - 1)
-      if (tmp < 0) {
-          tmp = self.maxDeg + tmp;
-      } else if (tmp > (self.maxDeg - 1)) {
-          tmp = tmp % self.maxDeg;
-      }
-
-      // This would suggest we are at an end position;
-      // we need to block further rotation.
-      if (Math.abs(tmp - self.lastDeg) > 180) {
-          return false;
-      }
-
-      self.currentDeg = tmp;
-      self.lastDeg = tmp;
-
-      self.turn(self.currentDeg);
-
-      self.pubsub.emit(self.eventName, {value: utils.normalize(self.rangeMax, self.maxDeg, self.currentDeg)});
-    };
-
-    var handleMouseup = function(e) {
-      self.domEl.removeEventListener('mousemove', handleMousemove);
-      document.removeEventListener('mouseup', handleMouseup);
-
-      // Saving the current rotation
-      self.rotation = self.currentDeg;
-
-      // Marking the starting degree as invalid
-      self.startDeg = -1;
-    };
-
-    //mousemove, touchmove
-    self.domEl.addEventListener('mousemove', handleMousemove);
-
-    //mouseup, touchend
-    document.addEventListener('mouseup', handleMouseup);
-  });
-}
-
-/**
- * Fired when the knob is turning
- *
- * @event
- * @name {id}-knob:turn
- * @memberOf Knob
- */
-
-module.exports = Knob;
-
-},{"./dom":14,"./utils":17}],7:[function(require,module,exports){
-/**
- * @constructor
- */
-function Pad(id, sample, key, domEl) {
-  this.id = id;
-  this.sample = sample;
-  this.key = key;
-  this.domEl = domEl;
-  this.enabled = false;
-  this.enabledClass = 'enabled';
-}
-
-/**
- * Bind event listeners for events we're interested in.
- * @param when {number} Where to begin playback
- * @return this
- */
-Pad.prototype.press = function(when) {
-  this.sample.play(when);
-  return this;
-}
-
-/**
- * Toggle the enabled css class on the pad dom element
- * @return this
- */
-Pad.prototype.toggleEnabled = function() {
-  this.enabled = !this.enabled;
-  if (this.enabled) {
-    this.domEl.classList.add(this.enabledClass);
-  } else {
-    this.domEl.classList.remove(this.enabledClass);
-  }
-  return this;
-}
-
-module.exports = Pad;
-
-},{}],8:[function(require,module,exports){
-var Knob = require('./Knob');
-/**
- * @constructor
- */
-function QControl(id, socket, pubsub) {
-  this.id = id;
-  this.socket = socket;
-  this.pubsub = pubsub;
-  this.domEl = document.getElementById(this.id);
-  this.node = null;
-  this.mult = 30;
-  this.knob = new Knob('q-knob', this.pubsub, 1);
-}
-
-/**
- * Init setup the instance
- * @param node {object} instance of context.createQNode()
- * @return this
- */
-QControl.prototype.init = function(node) {
-  this.knob.init();
-  this._setNode(node);
-  this._handleEvents();
-  this._handleIO();
-  return this;
-}
-
-/**
- * Set node property
- * @param node {object} instance of context.createQNode()
- * @return this
- */
-QControl.prototype._setNode = function(node) {
-  this.node = node;
-  return this;
-}
-
-// Again, borrowed with gratitude from:
-// http://www.html5rocks.com/en/tutorials/webaudio/intro/js/filter-sample.js
-QControl.prototype.changeQ = function(element) {
-  this.node.Q.value = element.value * this.mult;
-}
-
-/**
- * Bind listeners to events
- * @private
- * @return undefined
- */
-QControl.prototype._handleEvents = function() {
-  var self = this;
-
-  //input
-  this.domEl.addEventListener('input', function(e) {
-    self.changeQ(e.target);
-  }, false);
-
-  //custom
-  this.pubsub.on(self.knob.eventName, function(data) {
-    self.setInputRangeValue(data.value);
-    self.changeQ(self.domEl);
-  });
-}
-
-/**
- * Handle websockets events and communication
- */
-QControl.prototype._handleIO = function() {
-  var self = this;
-
-  this.socket.emit('control:q:loaded');
-
-  this.socket.on('j5:potQ:read', function(data) {
-    self._updateKnob(data);
-  });
-}
-
-/**
- * Update q ui knob value and rotate it as incoming
- * data is received from arduino controller
- * @private
- * @param data {object} The incoming data stream from websockets
- */
-QControl.prototype._updateKnob = function(data) {
-  this.setInputRangeValue(data.calculated);
-  this.changeQ(this.domEl);
-  this.knob.turn(Math.floor(data.knob));
-}
-
-/**
- * Set the Q's html input range value
- * @param data {number}
- */
-QControl.prototype.setInputRangeValue = function(data) {
-  this.domEl.value = data;
-}
-
-/**
- * Fired when the init method is called
- *
- * @event
- * @name control:q:loaded
- * @memberOf QControl
- */
-
-module.exports = QControl;
-
-},{"./Knob":6}],9:[function(require,module,exports){
-/**
- * @constructor
- */
-function Sample (context, pubsub, filterNode, gainNode, url, buffer) {
-  this.context = context;
-  this.pubsub = pubsub;
-  this.filterNode = filterNode;
-  this.gainNode = gainNode;
-	this.url = url;
-  this.buffer = buffer;
-  this.source = null;
-  this.filterEnabled = null;
-};
-
-/**
- * Setup the sample instance
- * @param isEnabled {boolean} value to se the isFilterEnabled property
- * @return this
- */
-Sample.prototype.init = function(isEnabled) {
-  var self = this;
-
-  this.setFilterEnabled(isEnabled);
-
-  this.pubsub.on('filter:enabled:true', function() {
-    self.setFilterEnabled(true);
-  });
-
-  this.pubsub.on('filter:enabled:false', function() {
-    self.setFilterEnabled(false);
-  });
-
-  return this;
-}
-
-/**
- * Set the filterEnabled property
- * @param isEnabled {boolean}
- * @return this
- */
-Sample.prototype.setFilterEnabled = function(isEnabled) {
-  this.filterEnabled = isEnabled;
-  return this;
-}
-
-/**
- * Play the sound!
- * @param time {number} time to begin playback
- * @return this
- */
-Sample.prototype.play = function (time) {
-  time = time || 0;
-
-  // create sample's sound source
-  this.source = this.context.createBufferSource();
-
-  // tell source which sound to play
-  this.source.buffer = this.buffer;
-
-  // connect source to specified nodes and destination
-  // @TODO totally not sustainable, come up with something more clever
-  // and abstract this out of here too.
-  if (this.filterNode && this.filterEnabled && this.gainNode) {
-    this.source.connect(this.filterNode);
-    this.filterNode.connect(this.gainNode);
-    this.gainNode.connect(this.context.destination);
-  } else if (this.filterNode && this.filterEnabled) {
-    this.source.connect(this.filterNode);
-    this.filterNode.connect(this.context.destination);
-  } else if (this.gainNode) {
-    this.source.connect(this.gainNode);
-    this.gainNode.connect(this.context.destination);
-  } else {
-    this.source.connect(this.context.destination);
-  }
-
-  this.source.start(time);
-
-  return this;
-}
-
-/**
- * @param time {number} which point to stop the sample playback
- * @return this
- */
-Sample.prototype.stop = function(time) {
-  this.source.stop(time);
-  return this;
-}
-
-module.exports = Sample;
-
-},{}],10:[function(require,module,exports){
-/**
- * Great read here:
- * http://www.html5rocks.com/en/tutorials/audio/scheduling/
- *
- * Borrowed (and mangled) ideas with gratitude from:
- * https://github.com/cwilso/metronome/blob/master/js/metronome.js
- *
- * Also borrowed some ideas from this one:
- * http://chromium.googlecode.com/svn/trunk/samples/audio/shiny-drum-machine.html
- *
- * @constructor
- */
-function Scheduler(context, pubsub, tempo) {
-  this.context = context;
-  this.pubsub = pubsub;
-  this.stepSequencer = null;
-
-  /**
-   * The start time of the entire sequence.
-   */
-  this.startTime;
-
-  /**
-   * What note is currently last scheduled?
-   */
-  this.currentNote;
-
-  /**
-   * What is the current time Mr. Templar?
-   */
-  this.currentTime = 0;
-
-  /**
-   * tempo (in beats per minute)
-   */
-  this.tempo = tempo;
-
-  /**
-   * How frequently to call scheduling function
-   * (in milliseconds)
-   */
-  this.lookahead = 0.0;
-
-  /**
-   * How far ahead to schedule audio (sec)
-   * This is calculated from lookahead, and overlaps
-   * with next interval (in case the timer is late)
-   */
-  this.scheduleAheadTime = 0.2;
-
-  /**
-   * when the next note is due.
-   */
-  this.nextNoteTime = 0.0;
-
-  /**
-   * setTimeout identifier
-   */
-  this.timerID = 0;
-
-  /**
-   * An attempt to sync drawing time with sound
-   */
-  this.lastDrawTime = -1;
-}
-
-/**
- * Setup the instance
- * @return this
- */
-Scheduler.prototype.init = function(stepSequencer) {
-  this.stepSequencer = stepSequencer;
-  this._handleEvents();
-  return this;
-}
-
-/**
- * Increment currentNote and advance nextNoteTime
- */
-Scheduler.prototype.nextNote = function() {
-  // Advance current note and time by a 16th note...
-  // Notice this picks up the CURRENT tempo value to calculate beat length.
-  var secondsPerBeat = 60.0 / this.tempo;
-
-  // Add beat length to last beat time
-  this.nextNoteTime += 0.25 * secondsPerBeat;
-
-  // Advance the beat number, wrap to zero
-  this.currentNote++;
-  if (this.currentNote == this.stepSequencer.sequenceLength) {
-    this.currentNote = 0;
-  }
-}
-
-/**
- * The "loop" to "schedule" notes to be played.
- * Also tries to sync drawing time with sound playback.
- * Is triggered when play button is pressed, recurses while step sequencer is playing.
- */
-Scheduler.prototype.run = function() {
-  var self = this,
-    activeRowSamples = [];
-
-  this.currentTime = this.context.currentTime;
-
-  // The sequence starts at startTime, so normalize currentTime so that it's 0 at the start of the sequence.
-  this.currentTime -= this.startTime;
-
-  // determine which pads in the step sequencer's current row are enabled
-  // and create an array of the samples corresponding to the enabled pads
-  // for playback.
-  // @TODO Is there a much better way to manage this?
-  for (var j = 0, row = this.stepSequencer.grid[this.currentNote].pads; j < row.length; j++) {
-    if (row[j].enabled) {
-      activeRowSamples.push(row[j].sample);
-    }
-  }
-
-  // while there are notes that will need to play before the next interval,
-  // schedule them and advance the pointer.
-  while (this.nextNoteTime < this.currentTime + this.scheduleAheadTime) {
-    // Convert noteTime to context time.
-    var contextPlayTime = this.nextNoteTime + this.startTime;
-
-    for (var i = 0; i < activeRowSamples.length; i++) {
-      (function(x) {
-        activeRowSamples[x].play(contextPlayTime);
-      }(i));
-    }
-
-    // Attempt to synchronize drawing time with sound
-    if (this.nextNoteTime !== this.lastDrawTime) {
-      this.lastDrawTime = this.nextNoteTime;
-      this.stepSequencer.draw((this.currentNote + 7) % this.stepSequencer.sequenceLength);
-    }
-
-    this.nextNote();
-  }
-
-  this.timerID = window.setTimeout(this.run.bind(this), this.lookahead);
-}
-
-/**
- * subscribe to and bind event listeners
- */
-Scheduler.prototype._handleEvents = function() {
-  var self = this;
-
-  this.pubsub.on('tempo:set', function(data) {
-    self.tempo = data.tempo;
-  });
-}
-
-module.exports = Scheduler;
-
-},{}],11:[function(require,module,exports){
-var Pad = require('./Pad');
-
-/**
- * @constructor
- */
-function StepSequencer(id, context, pubsub, scheduler, socket, title) {
-
-  /**
-   * The step sequencer html element's id
-   */
-  this.id = id;
-
-  /**
-   * The AudioContext instance
-   */
-  this.context = context;
-
-  /**
-   * The app pubsub instance
-   */
-  this.pubsub = pubsub;
-
-  /**
-   * The app scheduler instance
-   */
-  this.scheduler = scheduler;
-
-  /**
-   * The app websocket instance
-   */
-  this.socket = socket;
-
-  /**
-   * The step sequencer html element dom reference
-   */
-  this.domEl = document.getElementById(this.id);
-
-  /**
-   * Array of sample instances
-   */
-  this.samples = null;
-
-  /**
-   * Refers to row length, but also represents grid size (8 x 8)
-   */
-  this.sequenceLength = 8;
-
-  /**
-   * Stores array of object references to each row's dom element and
-   * containing pad instances as an array
-   */
-  this.rows = [];
-
-  /**
-   * Stores references to each cell of the sequencer grid.
-   * Each cell holds an instance of the Pad class.
-   */
-  this.grid = [];
-
-  /**
-   * Sequencer grid column count
-   */
-  this.gridCols = this.sequenceLength;
-
-  /**
-   * Sequencer grid row count
-   */
-  this.gridRows = this.sequenceLength;
-
-  /**
-   * A map of pad instances. The pad instance's dom element
-   * id is key, pad instance is the value. This map of pads
-   * exists as arrays within the grid array property.
-   */
-  this.pads = {};
-
-  /**
-   * The grid's active row css class
-   */
-  this.rowActiveClass = 'active';
-
-  /**
-   * The displayed tabbed title
-   */
-  this.title = title;
-
-  /**
-   * Is this the active step sequencer?
-   */
-  this.isActiveSequencer = true;
-}
-
-/**
- * Setup the StepSequencer instance
- * @return this
- */
-StepSequencer.prototype.init = function(samples) {
-  this.samples = samples;
-  this._addTitle();
-  this._setupGrid();
-  this._handleEvents();
-  this._handleIO();
-  return this;
-}
-
-/**
- * Create title html element and append it to parent
- * @return this
- */
-StepSequencer.prototype._addTitle = function() {
-  var title = document.createElement('h2');
-  title.classList.add('title', 'step-sequencer-title', 'active');
-  title.textContent = this.title;
-  this.domEl.appendChild(title);
-  return this;
-}
-
-/**
- * Create the step sequencer grid of pads,
- * instantiate Pad for each cell, and append the
- * generated dom to the step-sequencer dom element.
- * @return this
- */
-StepSequencer.prototype._setupGrid = function() {
-  var docFrag = document.createDocumentFragment();
-  var row, obj, pads, pad;
-
-  for (var i = 0; i < this.gridCols; i++) {
-
-    //create the row dom element
-    row = document.createElement('div');
-    row.classList.add('step-row');
-    row.id = 'step-row' + (i + 1);
-
-    //store reference to the row dom element
-    obj = {};
-    obj['id'] = row.id;
-    obj['domEl'] = row;
-    this.grid[i] = obj;
-
-    //initialize the local pads var before each for loop
-    pads = [];
-
-    //create the pads for each row
-    for (var j = 0; j < this.gridRows; j++) {
-      pad = document.createElement('div');
-      pad.classList.add('pad', 'col', 'col' + (j + 1));
-      pad.id = row.id + '_col' + (j + 1);
-      pads[j] = new Pad(pad.id, this.samples[j], null, pad);
-      //Store each pad instance in this.pads
-      this.pads[pad.id] = pads[j];
-      row.appendChild(pad);
-    }
-    this.grid[i].pads = pads;
-
-    docFrag.appendChild(row);
-  }
-  this.domEl.appendChild(docFrag);
-
-  return this;
-}
-
-/**
- * Update the grid row css class
- */
-StepSequencer.prototype.draw = function(rowIndex) {
-  var previousIndex = (rowIndex + 7) % this.sequenceLength;
-
-  this.grid[rowIndex].domEl.classList.add(this.rowActiveClass);
-  this.grid[previousIndex].domEl.classList.remove(this.rowActiveClass);
-}
-
-/**
- * Manage websockets event communication
- */
-StepSequencer.prototype._handleIO = function() {
-  var self = this;
-
-  this.socket.emit('stepsequencer:loaded');
-
-  this.socket.on('j5:ready', function() {
-    console.log('j5:ready');
-  });
-
-  this.socket.on('j5:button:down', function(data) {
-    self.pads['step-row' + data.row + '_col' + data.col].toggleEnabled();
-  });
-}
-
-/**
- * Subscribe and bind listeners to events
- * @private
- */
-StepSequencer.prototype._handleEvents = function() {
-  var self = this;
-
-  this.pubsub.on('transport:play', function() {
-    self.play();
-  });
-
-  this.pubsub.on('transport:pause', function() {
-    self.pause();
-  });
-
-  //click
-  this.domEl.addEventListener('click', function(e) {
-    if (e.target.id in self.pads) {
-      self.pads[e.target.id].toggleEnabled();
-    }
-  }, false);
-}
-
-/**
- * Kick off the scheduler loop
- */
-StepSequencer.prototype.play = function (time) {
-  this.scheduler.currentNote = this.scheduler.currentNote || 0;
-  this.scheduler.startTime = this.context.currentTime + 0.005; // what's this 0.005 about?
-  this.scheduler.nextNoteTime = 0.0;
-  this.scheduler.run();
-}
-
-/**
- * Stop the scheduler loop
- */
-StepSequencer.prototype.pause = function() {
-  window.clearTimeout(this.scheduler.timerID);
-}
-
-/**
- * Fired when the init method is called
- *
- * @event
- * @name stepsequencer:loaded
- * @memberOf StepSequencer
- */
-
-module.exports = StepSequencer;
-
-},{"./Pad":7}],12:[function(require,module,exports){
-/**
- * @constructor
- */
-function Tempo(id, pubsub) {
-  this.id = id;
-  this.pubsub = pubsub;
-  this.domEl = document.getElementById(this.id);
-  this.tempo = 120.0;
-  this.tempoMin = 0;
-  this.tempoMax = 240.0;
-  this.decreaseId = 'tempo-decrease';
-  this.increaseId = 'tempo-increase';
-  this.bpmId = 'bpm';
-}
-
-/**
- * Setup the tempo instance
- */
-Tempo.prototype.init = function() {
-  this._handleEvents();
-}
-
-/**
- * Returns the tempo
- * @return {number}
- */
-Tempo.prototype.getTempo = function() {
-  return this.tempo;
-}
-
-/**
- * Set the tempo property with the provided value
- * and publish the event
- * @param tempo {number}
- * @return this
- */
-Tempo.prototype.setTempo = function(tempo) {
-  if (tempo < this.tempoMin) {
-    tempo = this.tempoMin;
-  }
-  if (tempo > this.tempoMax) {
-    tempo = this.tempoMax;
-  }
-  this.tempo = tempo;
-
-  this.pubsub.emit('tempo:set', {tempo: this.tempo});
-
-  return this;
-}
-
-/**
- * Update ui with current tempo value
- */
-Tempo.prototype.updateBpm = function() {
-  document.getElementById(this.bpmId).textContent = this.tempo;
-}
-
-/**
- * Decrement the tempo by 1
- */
-Tempo.prototype.decrease = function() {
-  this.setTempo(--this.tempo);
-  this.updateBpm();
-}
-
-/**
- * Increment the tempo by 1
- */
-Tempo.prototype.increase = function() {
-  this.setTempo(++this.tempo);
-  this.updateBpm();
-}
-
-/**
- * Subscribe to and bind event listeners
- */
-Tempo.prototype._handleEvents = function() {
-  var self = this;
-
-  //click
-  this.domEl.addEventListener('click', function(e) {
-
-    // decrease tempo
-    if (e.target.id === self.decreaseId) {
-      self.decrease();
-    }
-
-    //increase tempo
-    if (e.target.id === self.increaseId) {
-      self.increase();
-    }
-  }, false);
-
-  //keydown
-  document.addEventListener('keydown', function(e) {
-
-    // down arrow
-    if (e.keyCode === 40) {
-      self.decrease();
-    }
-
-    // up arrow
-    if (e.keyCode === 38) {
-      self.increase();
-    }
-  });
-}
-
-/**
- * Fired when the tempo is set
- *
- * @event
- * @name tempo:set
- * @memberOf Tempo
- */
-
-module.exports = Tempo;
-
-},{}],13:[function(require,module,exports){
-/**
- * @constructor
- */
-function Transport(id, playId, pauseId, context, pubsub) {
-  this.id = id;
-  this.playId = playId;
-  this.pauseId = pauseId;
-  this.context = context;
-  this.pubsub = pubsub;
-  this.domEl = document.getElementById(this.id);
-  this.playEl = document.getElementById(this.playId);
-  this.pauseEl = document.getElementById(this.pauseId);
-  this.isPlaying = false;
-}
-
-/**
- * Setup the transport instance
- */
-Transport.prototype.init = function() {
-  this._handleEvents();
-}
-
-/**
- * Toggle the isPlaying property value and publish
- * a corresponding event
- */
-Transport.prototype.togglePlay = function() {
-  this.isPlaying = !this.isPlaying;
-  if (this.isPlaying) {
-    this.pubsub.emit('transport:play');
-  } else {
-    this.pubsub.emit('transport:pause');
-  }
-}
-
-/**
- * Bind listeners to events
- * @private
- */
-Transport.prototype._handleEvents = function() {
-  var self = this;
-
-  //click
-  this.domEl.addEventListener('click', function(e) {
-
-    // play
-    if (e.target.id === self.playId) {
-      console.log('play clicked');
-      self.togglePlay();
-    }
-
-    // pause
-    if (e.target.id === self.pauseId) {
-      console.log('pause clicked');
-      self.togglePlay();
-    }
-  }, false);
-
-  //key
-  document.addEventListener('keydown', function(e) {
-    // space bar
-    if (e.keyCode === 32) {
-      self.togglePlay();
-    }
-  });
-}
-
-/**
- * Fired when transport is playing
- *
- * @event
- * @name transport:play
- * @memberOf Transport
- */
-
-/**
- * Fired when transport is paused`
- *
- * @event
- * @name transport:paused
- * @memberOf Transport
- */
-
-module.exports = Transport;
-
-},{}],14:[function(require,module,exports){
-exports.getOffset = function getOffset(elem) {
-  var props = {},
-    rect = elem.getBoundingClientRect();
-
-  props.left = rect.left;
-  props.top = rect.top;
-
-  return props;
-}
-
-exports.getHeight = function getHeight(elem) {
-  var rect = elem.getBoundingClientRect();
-  return rect.height;
-}
-
-exports.getWidth = function getWidth(elem) {
-  var rect = elem.getBoundingClientRect();
-  return rect.width;
-}
-
-},{}],15:[function(require,module,exports){
-var App = require('./App');
-
-window.app = new App();
-
-// Bootstrap it.
-window.addEventListener('load', function () {
-  'use strict';
-
-  console.log('window load event');
-  app.init();
-
-}, false);
-
-},{"./App":1}],16:[function(require,module,exports){
-/**
- * @var sampleUrls {array} Store urls of audio samples.
- */
-var sampleUrls = [
-  //1 - 8
-  'audio/808/808_Clap.wav',
-  'audio/808/808_Cymbal_low.wav',
-  'audio/808/808_Hat_closed.wav',
-  'audio/808/808_Snare_hi1.wav',
-  'audio/808/808_Kick_short.wav',
-  'audio/808/808_Kick_long.wav',
-  'audio/808/808_Lo_Tom.wav',
-  'audio/808/808_Md_Conga.wav',
-  //9 - 16
-  'audio/808/808_Hi_Tom.wav',
-  'audio/808/808_Maracas.wav',
-  'audio/808/808_Rimshot.wav',
-  'audio/808/808_Clave.wav',
-  'audio/808/808_Hi_Conga.wav',
-  'audio/808/808_Cowbell.wav',
-  'audio/808/808_Md_Tom.wav',
-  'audio/808/808_Snare_lo1.wav'
-];
-
-module.exports = sampleUrls;
-
-},{}],17:[function(require,module,exports){
-/**
- * Normalize a given value from a larger range of numbers to a smaller
- * range of numbers.
- *
- * @param scaleMax {number} The largest number in the range being scaled to
- * @param rangeMax {number} The largest number in the range the value appeared in
- * @param value {number} The number to be scaled
- * @return {number}
- */
-exports.normalize = function(scaleMax, rangeMax, value) {
-  return scaleMax * (value / rangeMax);
-}
-
-},{}],18:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -2065,7 +303,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],19:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -2090,7 +328,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],20:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -2145,14 +383,14 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],21:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],22:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var process=require("__browserify_process"),global=typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {};// Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -2740,4 +978,1766 @@ function hasOwnProperty(obj, prop) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
-},{"./support/isBuffer":21,"__browserify_process":20,"inherits":19}]},{},[15])
+},{"./support/isBuffer":4,"__browserify_process":3,"inherits":2}],6:[function(require,module,exports){
+var util = require('util');
+var EventEmitter = require('events').EventEmitter;
+var sampleUrls = require('./sampleUrls');
+var Scheduler = require('./Scheduler');
+var StepSequencer = require('./StepSequencer');
+var Transport = require('./Transport');
+var GainControl = require('./GainControl');
+var FilterControl = require('./FilterControl');
+var QControl = require('./QControl');
+var BufferLoader = require('./BufferLoader');
+var Sample = require('./Sample');
+var Tempo = require('./Tempo');
+var ControlPanel = require('./ControlPanel');
+
+// Sort out the AudioContext
+window.AudioContext = window.AudioContext ||
+  window.webkitAudioContext ||
+  window.mozAudioContext ||
+  window.oAudioContext ||
+  window.msAudioContext;
+
+/**
+ * @constructor
+ */
+function App() {
+  this.socket = null;
+  this.context = null;
+  this.bufferLoader = null;
+  this.bufferList = null;
+  this.scheduler = null;
+  this.stepSequencer = null;
+  this.transport = null;
+  this.gainControl = null;
+  this.filterControl = null;
+  this.qControl = null;
+  this.sampleUrls = null;
+  this.samples = [];
+  this.tempo = null;
+  this.controlPanel = null;
+  this.pubsub = null;
+}
+
+/**
+ * Bootstrap the app
+ * @return this
+ */
+App.prototype.init = function() {
+  var body,
+    callback = this.callbackLoaded.bind(this);
+
+  if (window.AudioContext) {
+    this.socket = io.connect('http://localhost');
+    this.pubsub = new EventEmitter();
+    this.pubsub.setMaxListeners(0);
+    this.context = new AudioContext();
+    this.tempo = new Tempo('tempo', this.pubsub);
+    this.controlPanel = new ControlPanel('control-panel', 'control-panel-title', this.pubsub);
+    this.scheduler = new Scheduler(this.context, this.pubsub, this.tempo.tempo);
+    this.stepSequencer = new StepSequencer('step-sequencer', this.context, this.pubsub, this.scheduler, this.socket, 'Drums');
+    this.transport = new Transport('transport', 'play', 'pause', this.context, this.pubsub);
+    this.gainControl = new GainControl('gain-control', this.socket, this.pubsub);
+    this.filterControl = new FilterControl('filter-control', this.context, this.pubsub, this.socket, 'filter-toggle', 'lowpass', 440);
+    this.qControl = new QControl('q-control', this.socket, this.pubsub);
+    this.sampleUrls = sampleUrls;
+    this.bufferLoader = new BufferLoader(
+      this.context,
+      this.sampleUrls,
+      callback
+    );
+
+    this.bufferLoader.load();
+  } else {
+    this.handleNoSupport();
+  }
+
+  return this;
+}
+
+/**
+ * Callback passed as a parameter to the BufferLoader instance
+ * @param bufferList {array}
+ */
+App.prototype.callbackLoaded = function(bufferList) {
+  this.setBufferList(bufferList);
+
+  // @TODO manage all the controls within a ControlPanel instance
+  this.controlPanel.init();
+  this.gainControl.init(this.context.createGain());
+  this.filterControl.init(this.context.createBiquadFilter());
+  this.qControl.init(this.filterControl.node);
+  this.transport.init();
+  this.tempo.init();
+
+  this.createSamples();
+  this.stepSequencer.init(this.samples);
+  this.scheduler.init(this.stepSequencer);
+  this._handleIO();
+}
+
+/**
+ * Tell user to use a better browser.
+ */
+App.prototype.handleNoSupport = function() {
+  body = document.getElementsByTagName('body');
+  body[0].innerHTML = '<h1>Aww snap! This browser does not support the Web Audio API.</h1>';
+}
+
+/**
+ *  Handle websockets events and communication
+ */
+App.prototype._handleIO = function() {
+  var self = this;
+
+  this.socket.emit('app:loaded');
+}
+
+/**
+ *  Errr, umm, create the sample instances
+ * @return this
+ */
+App.prototype.createSamples = function() {
+  for (var i = 0; i < this.bufferList.length; i++) {
+    this.samples[i] = new Sample(this.context, this.pubsub, this.filterControl.node, this.gainControl.node, this.sampleUrls[i], this.bufferList[i]);
+    this.samples[i].init(this.filterControl.isEnabled);
+  }
+  return this;
+}
+
+/**
+ * Set bufferList property
+ * @param bufferList {array}
+ * @return this
+ */
+App.prototype.setBufferList = function(bufferList) {
+  this.bufferList = bufferList;
+  return this;
+}
+
+/**
+ * Fired when the init method is called and app is successfully
+ * bootstrapped
+ *
+ * @event
+ * @name app:loaded
+ * @memberOf App
+ */
+
+module.exports = App;
+
+},{"./BufferLoader":7,"./ControlPanel":8,"./FilterControl":9,"./GainControl":10,"./QControl":13,"./Sample":14,"./Scheduler":15,"./StepSequencer":16,"./Tempo":17,"./Transport":18,"./sampleUrls":21,"events":1,"util":5}],7:[function(require,module,exports){
+// Borrowed with gratitude from:
+// http://www.html5rocks.com/en/tutorials/webaudio/intro/
+function BufferLoader(context, urlList, callback) {
+  this.context = context;
+  this.urlList = urlList;
+  this.onload = callback;
+  this.bufferList = new Array();
+  this.loadCount = 0;
+}
+
+BufferLoader.prototype.loadBuffer = function(url, index) {
+  // Load buffer asynchronously
+  var request = new XMLHttpRequest();
+  request.open("GET", url, true);
+  request.responseType = "arraybuffer";
+
+  var loader = this;
+
+  request.onload = function() {
+    // Asynchronously decode the audio file data in request.response
+    loader.context.decodeAudioData(
+      request.response,
+      function(buffer) {
+        if (!buffer) {
+          alert('error decoding file data: ' + url);
+          return;
+        }
+        loader.bufferList[index] = buffer;
+        if (++loader.loadCount == loader.urlList.length)
+          loader.onload(loader.bufferList);
+      },
+      function(error) {
+        console.error('decodeAudioData error', error);
+      }
+    );
+  }
+
+  request.onerror = function() {
+    alert('BufferLoader: XHR error');
+  }
+
+  request.send();
+}
+
+BufferLoader.prototype.load = function() {
+  for (var i = 0; i < this.urlList.length; ++i) {
+  	this.loadBuffer(this.urlList[i], i);
+  }
+}
+
+module.exports = BufferLoader;
+
+},{}],8:[function(require,module,exports){
+function ControlPanel(id, titleId, pubsub) {
+  this.id = id;
+  this.titleId = titleId;
+  this.domEl = document.getElementById(this.id);
+  this.titleDomEl = null;
+  this.isOpen = true;
+  this.isClosed = false;
+  this.openClass = 'open';
+  this.closedClass = 'closed';
+}
+
+ControlPanel.prototype.init = function() {
+  this.setTitleDomEl();
+  this._handleEvents();
+}
+
+ControlPanel.prototype.setTitleDomEl = function() {
+  this.titleDomEl = document.getElementById(this.titleId);
+  return this;
+}
+
+ControlPanel.prototype._handleEvents = function() {
+  var self = this;
+
+
+  // click
+  this.titleDomEl.addEventListener('click', function(e) {
+
+    if (self.isClosed) {
+      self.open();
+    } else {
+      self.close();
+    }
+
+  }, false);
+
+  // key press
+  window.addEventListener('keydown', function(e) {
+
+    // 67 = c
+    if (67 === e.which) {
+      if (self.isClosed) {
+        self.open();
+      } else {
+        self.close();
+      }
+    }
+
+  }, false);
+
+  this._handleResize();
+}
+
+ControlPanel.prototype._handleResize = function() {
+  var mql = window.matchMedia('(min-width: 70em)');
+  mql.addListener(this._handleMql.bind(this));
+  this._handleMql(mql);
+}
+
+ControlPanel.prototype._handleMql = function(mql) {
+  if (mql.matches) {
+    //viewport is wider than 70em
+    this.open();
+  } else {
+    // viewport is less than 70em
+    this.close();
+  }
+}
+
+ControlPanel.prototype.open = function() {
+  this.isOpen = true;
+  this.isClosed = false;
+  this.domEl.classList.remove(this.closedClass);
+  this.domEl.classList.add(this.openClass);
+}
+
+ControlPanel.prototype.close = function() {
+  this.isOpen = false;
+  this.isClosed = true;
+  this.domEl.classList.add(this.closedClass);
+  this.domEl.classList.remove(this.openClass);
+}
+
+module.exports = ControlPanel;
+
+},{}],9:[function(require,module,exports){
+var Knob = require('./Knob');
+
+/**
+ * @constructor
+ * Manages a filter ui control and the audio context filter node
+ */
+function FilterControl(id, context, pubsub, socket, toggleId, type, cutoff) {
+
+  /**
+   * Hidden html range input id
+   * @property {string}
+   */
+  this.id = id;
+
+  /**
+   * The audio context instance
+   * @property {object}
+   */
+  this.context = context;
+
+  /**
+   * the pubsub instance
+   * @property {object}
+   */
+  this.pubsub = pubsub;
+
+  /**
+   * the websocket instance
+   * @property {object}
+   */
+  this.socket = socket;
+
+  /**
+   * Html checkbox id
+   * @property {string}
+   */
+  this.toggleId = toggleId;
+
+  /**
+   * filter type (lowpass, hipass, etc)
+   * @property {string}
+   */
+  this.type = type;
+
+  /**
+   * filter cutoff frequency value
+   * @property {number}
+   */
+  this.cutoffFrequency = cutoff;
+
+  /**
+   * Hidden html range input dom reference
+   * @property {object}
+   */
+  this.domEl = document.getElementById(this.id);
+
+  /**
+   * filter node instance
+   * @property {object}
+   */
+  this.node = null;
+
+  /**
+   * html checkbox dom reference
+   * @property {object}
+   */
+  this.toggleEl = document.getElementById(this.toggleId);
+
+  /**
+   * Is the filter currently enabled?
+   * @property {boolean}
+   */
+  this.isEnabled = false;
+
+  /**
+   * instance of the Knob class
+   * @property {object}
+   */
+  this.knob = new Knob('filter-knob', this.pubsub, 1);
+}
+
+/**
+ * Init setup the instance
+ * @param node {object} instance of context.createBiquadFilterNode()
+ * @return this
+ */
+FilterControl.prototype.init = function(node) {
+  this.knob.init();
+  this._setIsEnabled();
+  this._setNode(node);
+  this._setFilterType(this.type);
+  this._setCutoffFrequency(this.cutoffFrequency);
+  this._handleEvents();
+  this._handleIO();
+  return this;
+}
+
+/**
+ * Sets the biquadfilternode instances filter type
+ * @private
+ * @param type {string} filter type per the webaudio BiQuadFilter w3c spec:
+ *  http://www.w3.org/TR/webaudio/#BiquadFilterNode-section
+ * @return this
+ */
+FilterControl.prototype._setFilterType = function(type) {
+  if (this.node === null) {
+    throw new ReferenceError('FilterControl.node is not defined', 'FilterControl');
+  }
+  this.node.type = type || 'lowpass';
+  return this;
+}
+
+/**
+ * Sets the biquadfilternode instances frequency cutoff value
+ * @private
+ * @param frequency {number} the cutoff frequency value (in Hz)
+ * @return this
+ */
+FilterControl.prototype._setCutoffFrequency = function(frequency) {
+  if (this.node === null) {
+    throw new ReferenceError('FilterControl.node is not defined', 'FilterControl');
+  }
+  this.node.frequency.value = frequency || 440;
+}
+
+/**
+ * Sets the isEnabled property
+ * @private
+ */
+FilterControl.prototype._setIsEnabled = function() {
+  this.isEnabled = (this.toggleEl !== null) ? this.toggleEl.checked : false;
+}
+
+/**
+ * Set node property
+ * @private
+ * @param node {object} instance of context.createFilterNode()
+ * @return this
+ */
+FilterControl.prototype._setNode = function(node) {
+  this.node = node;
+  return this;
+}
+
+// Again, borrowed with gratitude from:
+// http://www.html5rocks.com/en/tutorials/webaudio/intro/js/filter-sample.js
+FilterControl.prototype.changeFilter = function(element) {
+  // Clamp the frequency between the minimum value (40 Hz) and half of the
+  // sampling rate.
+  var minValue = 40;
+  var maxValue = this.context.sampleRate / 2;
+  // Logarithm (base 2) to compute how many octaves fall in the range.
+  var numberOfOctaves = Math.log(maxValue / minValue) / Math.LN2;
+  // Compute a multiplier from 0 to 1 based on an exponential scale.
+  var multiplier = Math.pow(2, numberOfOctaves * (element.value - 1.0));
+  // Get back to the frequency value between min and max.
+  this.node.frequency.value = maxValue * multiplier;
+}
+
+/**
+ * Bind listeners to events
+ * @private
+ */
+FilterControl.prototype._handleEvents = function() {
+  var self = this;
+
+  //input
+  this.domEl.addEventListener('input', function(e) {
+    self.changeFilter(e.target);
+  }, false);
+
+  //click
+  this.toggleEl.addEventListener('click', function(e) {
+    self.isEnabled = self.toggleEl.checked;
+    self.pubsub.emit('filter:enabled:' + self.isEnabled);
+  }, false);
+
+  //custom
+  this.pubsub.on(self.knob.eventName, function(data) {
+    self.setInputRangeValue(data.value);
+    self.changeFilter(self.domEl);
+  });
+}
+
+/**
+ * Handle websockets events and communication
+ */
+FilterControl.prototype._handleIO = function() {
+  var self = this;
+
+  this.socket.emit('control:filter:loaded');
+
+  this.socket.on('j5:buttonFilter:down', function() {
+    self.toggleFilter();
+  });
+
+  this.socket.on('j5:potFilter:read', function(data) {
+    self._updateKnob(data);
+  });
+}
+
+/**
+ * Handle filter checkbox checked status; emit a corresponding event
+ */
+FilterControl.prototype.toggleFilter = function() {
+  this.isEnabled = !this.isEnabled;
+  this.toggleEl.checked = this.isEnabled;
+  this.pubsub.emit('filter:enabled:' + this.isEnabled);
+}
+
+/**
+ * Update filter ui knob value and rotate it as incoming
+ * data is received from arduino controller
+ * @private
+ * @param data {object} The incoming data stream from websockets
+ */
+FilterControl.prototype._updateKnob = function(data) {
+  this.setInputRangeValue(data.calculated);
+  this.changeFilter(this.domEl);
+  this.knob.turn(Math.floor(data.knob));
+}
+
+/**
+ * Set the filter's html input range value
+ * @param data {number}
+ */
+FilterControl.prototype.setInputRangeValue = function(data) {
+  this.domEl.value = data;
+}
+
+/**
+ * Fired when the filter checkbox is checked
+ *
+ * @event
+ * @name filter:enabled:true
+ * @memberOf FilterControl
+ */
+
+/**
+ * Fired when the filter checkbox is unchecked
+ *
+ * @event
+ * @name filter:enabled:false
+ * @memberOf FilterControl
+ */
+
+
+/**
+ * Fired when the init method is called
+ *
+ * @event
+ * @name control:filter:loaded
+ * @memberOf FilterControl
+ */
+
+module.exports = FilterControl;
+
+},{"./Knob":11}],10:[function(require,module,exports){
+var Knob = require('./Knob');
+
+/**
+ * @constructor
+ */
+function GainControl(id, socket, pubsub) {
+  this.id = id;
+  this.socket = socket;
+  this.pubsub = pubsub;
+  this.domEl = document.getElementById(this.id);
+  this.node = null;
+  this.knob = new Knob('gain-knob', this.pubsub, 100, true);
+}
+
+/**
+ * Iinit setup the instance
+ * @param node {object} instance of context.createGainNode()
+ * @return this
+ */
+GainControl.prototype.init = function(node) {
+  this.knob.init();
+  this._setNode(node);
+  this._handleEvents();
+  this._handleIO();
+  return this;
+}
+
+/**
+ * Set node property
+ * @param node {object} instance of context.createGainNode()
+ * @return this
+ */
+GainControl.prototype._setNode = function(node) {
+  this.node = node;
+  return this;
+}
+
+// Again, borrowed with gratitude from:
+// http://www.html5rocks.com/en/tutorials/webaudio/intro/js/volume-sample.js
+GainControl.prototype.changeGain = function(element) {
+  var volume = element.value;
+  var fraction = parseInt(element.value) / parseInt(element.max);
+  // Let's use an x*x curve (x-squared) since simple linear (x) does not sound as good.
+  this.node.gain.value = fraction * fraction;
+}
+
+/**
+ * Bind listeners to events
+ * @private
+ * @return undefined
+ */
+GainControl.prototype._handleEvents = function() {
+  var self = this;
+
+  //input
+  this.domEl.addEventListener('input', function(e) {
+    self.changeGain(e.target);
+  }, false);
+
+  //custom
+  this.pubsub.on(self.knob.eventName, function(data) {
+    self.setInputRangeValue(data.value);
+    self.changeGain(self.domEl);
+  });
+}
+
+/**
+ * Handle websockets events
+ */
+GainControl.prototype._handleIO = function() {
+  var self = this,
+    gainKnob = document.getElementById('gain-knob');
+
+  this.socket.emit('control:gain:loaded');
+
+  this.socket.on('j5:potGain:read', function(data) {
+    self._updateKnob(data);
+  });
+}
+
+/**
+ * Set the gain's html input range value
+ * @param data {number}
+ */
+GainControl.prototype.setInputRangeValue = function(data) {
+  this.domEl.value = data;
+}
+
+/**
+ * Update ui knob value and rotate it as incoming
+ * data is received from arduino controller
+ * @private
+ * @param data {object} The incoming data stream from websockets
+ */
+GainControl.prototype._updateKnob = function(data) {
+  this.setInputRangeValue(data.calculated);
+  this.changeGain(this.domEl);
+  this.knob.turn(Math.floor(data.knob));
+}
+
+/**
+ * Fired when the init method is called
+ *
+ * @event
+ * @name control:gain:loaded
+ * @memberOf GainControl
+ */
+
+module.exports = GainControl;
+
+},{"./Knob":11}],11:[function(require,module,exports){
+var dom = require('./dom');
+var utils = require('./utils');
+
+/**
+ * Borrowed the general concept and math from
+ * https://github.com/martinaglv/KnobKnob/blob/master/knobKnob/knobKnob.jquery.js
+ * @constructor
+ */
+function Knob(id, pubsub, rangeMax, initMax) {
+
+  /**
+   * dom element id
+   */
+  this.id = id;
+
+  /**
+   * The pubsub instance
+   */
+  this.pubsub = pubsub;
+
+  /**
+   * The html input range max value for the knob control
+   * @member {number}
+   */
+  this.rangeMax = rangeMax;
+
+  /**
+   * Dynamically named event emitted on mouse events
+   * @member {string}
+   */
+  this.eventName = this.id + ':turn';
+
+  /**
+   * dom element reference
+   * @member {object}
+   */
+  this.domEl = document.getElementById(this.id);
+
+  /**
+   * Save the starting position of the drag
+   * @member {number}
+   */
+  this.startDeg = -1;
+
+  /**
+   * Keep track of the current degree the knob is turned to
+   * @member {number}
+   */
+  this.currentDeg = 0;
+
+  /**
+   * Store the current degree the knob is turned to on mouseup
+   * @member {number}
+   */
+  this.rotation = 0;
+
+  /**
+   * The last degree the knob was turned to
+   * @member {number}
+   */
+  this.lastDeg = 0;
+
+  /**
+   * Maximum degree the knob should be turned
+   * @member {number}
+   */
+  this.maxDeg = 270;
+
+  /**
+   * Should the knob be turned to the maxDeg on initialization
+   * @member {boolean}
+   */
+  this.initMax = initMax;
+}
+
+Knob.prototype.init = function() {
+  this._handleEvents();
+
+  if (this.initMax) {
+    this.rotation = this.lastDeg = this.currentDeg = this.maxDeg;
+    this.turn(this.maxDeg);
+  }
+}
+
+/**
+ * Rotate the knob dom element
+ * @return this
+ */
+Knob.prototype.turn = function(value) {
+  this.domEl.style.webkitTransform = 'rotate(' + value + 'deg)';
+  this.domEl.style.transform = 'rotate(' + value + 'deg)';
+  return this;
+}
+
+//@TODO Add touch support
+Knob.prototype._handleEvents = function() {
+  var self = this;
+
+  //mousedown, touchstart
+  this.domEl.addEventListener('mousedown', function(e) {
+
+    e.preventDefault();
+
+    var offset = dom.getOffset(self.domEl);
+
+    var center = {
+      y: offset.top + dom.getHeight(self.domEl) / 2,
+      x: offset.left + dom.getWidth(self.domEl) / 2
+    };
+
+    var a, b, deg, tmp;
+
+    var rad2deg = 180 / Math.PI;
+
+    var handleMousemove = function(e) {
+
+      //e = (e.touches) ? e.touches[0] : e;
+
+      a = center.y - e.pageY;
+      b = center.x - e.pageX;
+      deg = Math.atan2(a, b) * rad2deg;
+
+      // we have to make sure that negative
+      // angles are turned into positive:
+      if (deg < 0) {
+          deg = self.maxDeg + deg;
+      }
+
+      // Save the starting position of the drag
+      if (self.startDeg === -1) {
+          self.startDeg = deg;
+      }
+
+      // Calculating the current rotation
+      tmp = Math.floor((deg - self.startDeg) + self.rotation);
+
+      // Making sure the current rotation
+      // stays between 0 and (this.maxDeg - 1)
+      if (tmp < 0) {
+          tmp = self.maxDeg + tmp;
+      } else if (tmp > (self.maxDeg - 1)) {
+          tmp = tmp % self.maxDeg;
+      }
+
+      // This would suggest we are at an end position;
+      // we need to block further rotation.
+      if (Math.abs(tmp - self.lastDeg) > 180) {
+          return false;
+      }
+
+      self.currentDeg = tmp;
+      self.lastDeg = tmp;
+
+      self.turn(self.currentDeg);
+
+      self.pubsub.emit(self.eventName, {value: utils.normalize(self.rangeMax, self.maxDeg, self.currentDeg)});
+    };
+
+    var handleMouseup = function(e) {
+      self.domEl.removeEventListener('mousemove', handleMousemove);
+      document.removeEventListener('mouseup', handleMouseup);
+
+      // Saving the current rotation
+      self.rotation = self.currentDeg;
+
+      // Marking the starting degree as invalid
+      self.startDeg = -1;
+    };
+
+    //mousemove, touchmove
+    self.domEl.addEventListener('mousemove', handleMousemove);
+
+    //mouseup, touchend
+    document.addEventListener('mouseup', handleMouseup);
+  });
+}
+
+/**
+ * Fired when the knob is turning
+ *
+ * @event
+ * @name {id}-knob:turn
+ * @memberOf Knob
+ */
+
+module.exports = Knob;
+
+},{"./dom":19,"./utils":22}],12:[function(require,module,exports){
+/**
+ * @constructor
+ */
+function Pad(id, sample, key, domEl) {
+  this.id = id;
+  this.sample = sample;
+  this.key = key;
+  this.domEl = domEl;
+  this.enabled = false;
+  this.enabledClass = 'enabled';
+}
+
+/**
+ * Bind event listeners for events we're interested in.
+ * @param when {number} Where to begin playback
+ * @return this
+ */
+Pad.prototype.press = function(when) {
+  this.sample.play(when);
+  return this;
+}
+
+/**
+ * Toggle the enabled css class on the pad dom element
+ * @return this
+ */
+Pad.prototype.toggleEnabled = function() {
+  this.enabled = !this.enabled;
+  if (this.enabled) {
+    this.domEl.classList.add(this.enabledClass);
+  } else {
+    this.domEl.classList.remove(this.enabledClass);
+  }
+  return this;
+}
+
+module.exports = Pad;
+
+},{}],13:[function(require,module,exports){
+var Knob = require('./Knob');
+/**
+ * @constructor
+ */
+function QControl(id, socket, pubsub) {
+  this.id = id;
+  this.socket = socket;
+  this.pubsub = pubsub;
+  this.domEl = document.getElementById(this.id);
+  this.node = null;
+  this.mult = 30;
+  this.knob = new Knob('q-knob', this.pubsub, 1);
+}
+
+/**
+ * Init setup the instance
+ * @param node {object} instance of context.createQNode()
+ * @return this
+ */
+QControl.prototype.init = function(node) {
+  this.knob.init();
+  this._setNode(node);
+  this._handleEvents();
+  this._handleIO();
+  return this;
+}
+
+/**
+ * Set node property
+ * @param node {object} instance of context.createQNode()
+ * @return this
+ */
+QControl.prototype._setNode = function(node) {
+  this.node = node;
+  return this;
+}
+
+// Again, borrowed with gratitude from:
+// http://www.html5rocks.com/en/tutorials/webaudio/intro/js/filter-sample.js
+QControl.prototype.changeQ = function(element) {
+  this.node.Q.value = element.value * this.mult;
+}
+
+/**
+ * Bind listeners to events
+ * @private
+ * @return undefined
+ */
+QControl.prototype._handleEvents = function() {
+  var self = this;
+
+  //input
+  this.domEl.addEventListener('input', function(e) {
+    self.changeQ(e.target);
+  }, false);
+
+  //custom
+  this.pubsub.on(self.knob.eventName, function(data) {
+    self.setInputRangeValue(data.value);
+    self.changeQ(self.domEl);
+  });
+}
+
+/**
+ * Handle websockets events and communication
+ */
+QControl.prototype._handleIO = function() {
+  var self = this;
+
+  this.socket.emit('control:q:loaded');
+
+  this.socket.on('j5:potQ:read', function(data) {
+    self._updateKnob(data);
+  });
+}
+
+/**
+ * Update q ui knob value and rotate it as incoming
+ * data is received from arduino controller
+ * @private
+ * @param data {object} The incoming data stream from websockets
+ */
+QControl.prototype._updateKnob = function(data) {
+  this.setInputRangeValue(data.calculated);
+  this.changeQ(this.domEl);
+  this.knob.turn(Math.floor(data.knob));
+}
+
+/**
+ * Set the Q's html input range value
+ * @param data {number}
+ */
+QControl.prototype.setInputRangeValue = function(data) {
+  this.domEl.value = data;
+}
+
+/**
+ * Fired when the init method is called
+ *
+ * @event
+ * @name control:q:loaded
+ * @memberOf QControl
+ */
+
+module.exports = QControl;
+
+},{"./Knob":11}],14:[function(require,module,exports){
+/**
+ * @constructor
+ */
+function Sample (context, pubsub, filterNode, gainNode, url, buffer) {
+  this.context = context;
+  this.pubsub = pubsub;
+  this.filterNode = filterNode;
+  this.gainNode = gainNode;
+	this.url = url;
+  this.buffer = buffer;
+  this.source = null;
+  this.filterEnabled = null;
+};
+
+/**
+ * Setup the sample instance
+ * @param isEnabled {boolean} value to se the isFilterEnabled property
+ * @return this
+ */
+Sample.prototype.init = function(isEnabled) {
+  var self = this;
+
+  this.setFilterEnabled(isEnabled);
+
+  this.pubsub.on('filter:enabled:true', function() {
+    self.setFilterEnabled(true);
+  });
+
+  this.pubsub.on('filter:enabled:false', function() {
+    self.setFilterEnabled(false);
+  });
+
+  return this;
+}
+
+/**
+ * Set the filterEnabled property
+ * @param isEnabled {boolean}
+ * @return this
+ */
+Sample.prototype.setFilterEnabled = function(isEnabled) {
+  this.filterEnabled = isEnabled;
+  return this;
+}
+
+/**
+ * Play the sound!
+ * @param time {number} time to begin playback
+ * @return this
+ */
+Sample.prototype.play = function (time) {
+  time = time || 0;
+
+  // create sample's sound source
+  this.source = this.context.createBufferSource();
+
+  // tell source which sound to play
+  this.source.buffer = this.buffer;
+
+  // connect source to specified nodes and destination
+  // @TODO totally not sustainable, come up with something more clever
+  // and abstract this out of here too.
+  if (this.filterNode && this.filterEnabled && this.gainNode) {
+    this.source.connect(this.filterNode);
+    this.filterNode.connect(this.gainNode);
+    this.gainNode.connect(this.context.destination);
+  } else if (this.filterNode && this.filterEnabled) {
+    this.source.connect(this.filterNode);
+    this.filterNode.connect(this.context.destination);
+  } else if (this.gainNode) {
+    this.source.connect(this.gainNode);
+    this.gainNode.connect(this.context.destination);
+  } else {
+    this.source.connect(this.context.destination);
+  }
+
+  this.source.start(time);
+
+  return this;
+}
+
+/**
+ * @param time {number} which point to stop the sample playback
+ * @return this
+ */
+Sample.prototype.stop = function(time) {
+  this.source.stop(time);
+  return this;
+}
+
+module.exports = Sample;
+
+},{}],15:[function(require,module,exports){
+/**
+ * Great read here:
+ * http://www.html5rocks.com/en/tutorials/audio/scheduling/
+ *
+ * Borrowed (and mangled) ideas with gratitude from:
+ * https://github.com/cwilso/metronome/blob/master/js/metronome.js
+ *
+ * Also borrowed some ideas from this one:
+ * http://chromium.googlecode.com/svn/trunk/samples/audio/shiny-drum-machine.html
+ *
+ * @constructor
+ */
+function Scheduler(context, pubsub, tempo) {
+  this.context = context;
+  this.pubsub = pubsub;
+  this.stepSequencer = null;
+
+  /**
+   * The start time of the entire sequence.
+   */
+  this.startTime;
+
+  /**
+   * What note is currently last scheduled?
+   */
+  this.currentNote;
+
+  /**
+   * What is the current time Mr. Templar?
+   */
+  this.currentTime = 0;
+
+  /**
+   * tempo (in beats per minute)
+   */
+  this.tempo = tempo;
+
+  /**
+   * How frequently to call scheduling function
+   * (in milliseconds)
+   */
+  this.lookahead = 0.0;
+
+  /**
+   * How far ahead to schedule audio (sec)
+   * This is calculated from lookahead, and overlaps
+   * with next interval (in case the timer is late)
+   */
+  this.scheduleAheadTime = 0.2;
+
+  /**
+   * when the next note is due.
+   */
+  this.nextNoteTime = 0.0;
+
+  /**
+   * setTimeout identifier
+   */
+  this.timerID = 0;
+
+  /**
+   * An attempt to sync drawing time with sound
+   */
+  this.lastDrawTime = -1;
+}
+
+/**
+ * Setup the instance
+ * @return this
+ */
+Scheduler.prototype.init = function(stepSequencer) {
+  this.stepSequencer = stepSequencer;
+  this._handleEvents();
+  return this;
+}
+
+/**
+ * Increment currentNote and advance nextNoteTime
+ */
+Scheduler.prototype.nextNote = function() {
+  // Advance current note and time by a 16th note...
+  // Notice this picks up the CURRENT tempo value to calculate beat length.
+  var secondsPerBeat = 60.0 / this.tempo;
+
+  // Add beat length to last beat time
+  this.nextNoteTime += 0.25 * secondsPerBeat;
+
+  // Advance the beat number, wrap to zero
+  this.currentNote++;
+  if (this.currentNote == this.stepSequencer.sequenceLength) {
+    this.currentNote = 0;
+  }
+}
+
+/**
+ * The "loop" to "schedule" notes to be played.
+ * Also tries to sync drawing time with sound playback.
+ * Is triggered when play button is pressed, recurses while step sequencer is playing.
+ */
+Scheduler.prototype.run = function() {
+  var self = this,
+    activeRowSamples = [];
+
+  this.currentTime = this.context.currentTime;
+
+  // The sequence starts at startTime, so normalize currentTime so that it's 0 at the start of the sequence.
+  this.currentTime -= this.startTime;
+
+  // determine which pads in the step sequencer's current row are enabled
+  // and create an array of the samples corresponding to the enabled pads
+  // for playback.
+  // @TODO Is there a much better way to manage this?
+  for (var j = 0, row = this.stepSequencer.grid[this.currentNote].pads; j < row.length; j++) {
+    if (row[j].enabled) {
+      activeRowSamples.push(row[j].sample);
+    }
+  }
+
+  // while there are notes that will need to play before the next interval,
+  // schedule them and advance the pointer.
+  while (this.nextNoteTime < this.currentTime + this.scheduleAheadTime) {
+    // Convert noteTime to context time.
+    var contextPlayTime = this.nextNoteTime + this.startTime;
+
+    for (var i = 0; i < activeRowSamples.length; i++) {
+      (function(x) {
+        activeRowSamples[x].play(contextPlayTime);
+      }(i));
+    }
+
+    // Attempt to synchronize drawing time with sound
+    if (this.nextNoteTime !== this.lastDrawTime) {
+      this.lastDrawTime = this.nextNoteTime;
+      this.stepSequencer.draw((this.currentNote + 7) % this.stepSequencer.sequenceLength);
+    }
+
+    this.nextNote();
+  }
+
+  this.timerID = window.setTimeout(this.run.bind(this), this.lookahead);
+}
+
+/**
+ * subscribe to and bind event listeners
+ */
+Scheduler.prototype._handleEvents = function() {
+  var self = this;
+
+  this.pubsub.on('tempo:set', function(data) {
+    self.tempo = data.tempo;
+  });
+}
+
+module.exports = Scheduler;
+
+},{}],16:[function(require,module,exports){
+var Pad = require('./Pad');
+
+/**
+ * @constructor
+ */
+function StepSequencer(id, context, pubsub, scheduler, socket, title) {
+
+  /**
+   * The step sequencer html element's id
+   */
+  this.id = id;
+
+  /**
+   * The AudioContext instance
+   */
+  this.context = context;
+
+  /**
+   * The app pubsub instance
+   */
+  this.pubsub = pubsub;
+
+  /**
+   * The app scheduler instance
+   */
+  this.scheduler = scheduler;
+
+  /**
+   * The app websocket instance
+   */
+  this.socket = socket;
+
+  /**
+   * The step sequencer html element dom reference
+   */
+  this.domEl = document.getElementById(this.id);
+
+  /**
+   * Array of sample instances
+   */
+  this.samples = null;
+
+  /**
+   * Refers to row length, but also represents grid size (8 x 8)
+   */
+  this.sequenceLength = 8;
+
+  /**
+   * Stores array of object references to each row's dom element and
+   * containing pad instances as an array
+   */
+  this.rows = [];
+
+  /**
+   * Stores references to each cell of the sequencer grid.
+   * Each cell holds an instance of the Pad class.
+   */
+  this.grid = [];
+
+  /**
+   * Sequencer grid column count
+   */
+  this.gridCols = this.sequenceLength;
+
+  /**
+   * Sequencer grid row count
+   */
+  this.gridRows = this.sequenceLength;
+
+  /**
+   * A map of pad instances. The pad instance's dom element
+   * id is key, pad instance is the value. This map of pads
+   * exists as arrays within the grid array property.
+   */
+  this.pads = {};
+
+  /**
+   * The grid's active row css class
+   */
+  this.rowActiveClass = 'active';
+
+  /**
+   * The displayed tabbed title
+   */
+  this.title = title;
+
+  /**
+   * Is this the active step sequencer?
+   */
+  this.isActiveSequencer = true;
+}
+
+/**
+ * Setup the StepSequencer instance
+ * @return this
+ */
+StepSequencer.prototype.init = function(samples) {
+  this.samples = samples;
+  this._addTitle();
+  this._setupGrid();
+  this._handleEvents();
+  this._handleIO();
+  return this;
+}
+
+/**
+ * Create title html element and append it to parent
+ * @return this
+ */
+StepSequencer.prototype._addTitle = function() {
+  var title = document.createElement('h2');
+  title.classList.add('title', 'step-sequencer-title', 'active');
+  title.textContent = this.title;
+  this.domEl.appendChild(title);
+  return this;
+}
+
+/**
+ * Create the step sequencer grid of pads,
+ * instantiate Pad for each cell, and append the
+ * generated dom to the step-sequencer dom element.
+ * @return this
+ */
+StepSequencer.prototype._setupGrid = function() {
+  var docFrag = document.createDocumentFragment();
+  var row, obj, pads, pad;
+
+  for (var i = 0; i < this.gridCols; i++) {
+
+    //create the row dom element
+    row = document.createElement('div');
+    row.classList.add('step-row');
+    row.id = 'step-row' + (i + 1);
+
+    //store reference to the row dom element
+    obj = {};
+    obj['id'] = row.id;
+    obj['domEl'] = row;
+    this.grid[i] = obj;
+
+    //initialize the local pads var before each for loop
+    pads = [];
+
+    //create the pads for each row
+    for (var j = 0; j < this.gridRows; j++) {
+      pad = document.createElement('div');
+      pad.classList.add('pad', 'col', 'col' + (j + 1));
+      pad.id = row.id + '_col' + (j + 1);
+      pads[j] = new Pad(pad.id, this.samples[j], null, pad);
+      //Store each pad instance in this.pads
+      this.pads[pad.id] = pads[j];
+      row.appendChild(pad);
+    }
+    this.grid[i].pads = pads;
+
+    docFrag.appendChild(row);
+  }
+  this.domEl.appendChild(docFrag);
+
+  return this;
+}
+
+/**
+ * Update the grid row css class
+ */
+StepSequencer.prototype.draw = function(rowIndex) {
+  var previousIndex = (rowIndex + 7) % this.sequenceLength;
+
+  this.grid[rowIndex].domEl.classList.add(this.rowActiveClass);
+  this.grid[previousIndex].domEl.classList.remove(this.rowActiveClass);
+}
+
+/**
+ * Manage websockets event communication
+ */
+StepSequencer.prototype._handleIO = function() {
+  var self = this;
+
+  this.socket.emit('stepsequencer:loaded');
+
+  this.socket.on('j5:ready', function() {
+    console.log('j5:ready');
+  });
+
+  this.socket.on('j5:button:down', function(data) {
+    self.pads['step-row' + data.row + '_col' + data.col].toggleEnabled();
+  });
+}
+
+/**
+ * Subscribe and bind listeners to events
+ * @private
+ */
+StepSequencer.prototype._handleEvents = function() {
+  var self = this;
+
+  this.pubsub.on('transport:play', function() {
+    self.play();
+  });
+
+  this.pubsub.on('transport:pause', function() {
+    self.pause();
+  });
+
+  //click
+  this.domEl.addEventListener('click', function(e) {
+    if (e.target.id in self.pads) {
+      self.pads[e.target.id].toggleEnabled();
+    }
+  }, false);
+}
+
+/**
+ * Kick off the scheduler loop
+ */
+StepSequencer.prototype.play = function (time) {
+  this.scheduler.currentNote = this.scheduler.currentNote || 0;
+  this.scheduler.startTime = this.context.currentTime + 0.005; // what's this 0.005 about?
+  this.scheduler.nextNoteTime = 0.0;
+  this.scheduler.run();
+}
+
+/**
+ * Stop the scheduler loop
+ */
+StepSequencer.prototype.pause = function() {
+  window.clearTimeout(this.scheduler.timerID);
+}
+
+/**
+ * Fired when the init method is called
+ *
+ * @event
+ * @name stepsequencer:loaded
+ * @memberOf StepSequencer
+ */
+
+module.exports = StepSequencer;
+
+},{"./Pad":12}],17:[function(require,module,exports){
+/**
+ * @constructor
+ */
+function Tempo(id, pubsub) {
+  this.id = id;
+  this.pubsub = pubsub;
+  this.domEl = document.getElementById(this.id);
+  this.tempo = 120.0;
+  this.tempoMin = 0;
+  this.tempoMax = 240.0;
+  this.decreaseId = 'tempo-decrease';
+  this.increaseId = 'tempo-increase';
+  this.bpmId = 'bpm';
+}
+
+/**
+ * Setup the tempo instance
+ */
+Tempo.prototype.init = function() {
+  this._handleEvents();
+}
+
+/**
+ * Returns the tempo
+ * @return {number}
+ */
+Tempo.prototype.getTempo = function() {
+  return this.tempo;
+}
+
+/**
+ * Set the tempo property with the provided value
+ * and publish the event
+ * @param tempo {number}
+ * @return this
+ */
+Tempo.prototype.setTempo = function(tempo) {
+  if (tempo < this.tempoMin) {
+    tempo = this.tempoMin;
+  }
+  if (tempo > this.tempoMax) {
+    tempo = this.tempoMax;
+  }
+  this.tempo = tempo;
+
+  this.pubsub.emit('tempo:set', {tempo: this.tempo});
+
+  return this;
+}
+
+/**
+ * Update ui with current tempo value
+ */
+Tempo.prototype.updateBpm = function() {
+  document.getElementById(this.bpmId).textContent = this.tempo;
+}
+
+/**
+ * Decrement the tempo by 1
+ */
+Tempo.prototype.decrease = function() {
+  this.setTempo(--this.tempo);
+  this.updateBpm();
+}
+
+/**
+ * Increment the tempo by 1
+ */
+Tempo.prototype.increase = function() {
+  this.setTempo(++this.tempo);
+  this.updateBpm();
+}
+
+/**
+ * Subscribe to and bind event listeners
+ */
+Tempo.prototype._handleEvents = function() {
+  var self = this;
+
+  //click
+  this.domEl.addEventListener('click', function(e) {
+
+    // decrease tempo
+    if (e.target.id === self.decreaseId) {
+      self.decrease();
+    }
+
+    //increase tempo
+    if (e.target.id === self.increaseId) {
+      self.increase();
+    }
+  }, false);
+
+  //keydown
+  document.addEventListener('keydown', function(e) {
+
+    // down arrow
+    if (e.keyCode === 40) {
+      self.decrease();
+    }
+
+    // up arrow
+    if (e.keyCode === 38) {
+      self.increase();
+    }
+  });
+}
+
+/**
+ * Fired when the tempo is set
+ *
+ * @event
+ * @name tempo:set
+ * @memberOf Tempo
+ */
+
+module.exports = Tempo;
+
+},{}],18:[function(require,module,exports){
+/**
+ * @constructor
+ */
+function Transport(id, playId, pauseId, context, pubsub) {
+  this.id = id;
+  this.playId = playId;
+  this.pauseId = pauseId;
+  this.context = context;
+  this.pubsub = pubsub;
+  this.domEl = document.getElementById(this.id);
+  this.playEl = document.getElementById(this.playId);
+  this.pauseEl = document.getElementById(this.pauseId);
+  this.isPlaying = false;
+}
+
+/**
+ * Setup the transport instance
+ */
+Transport.prototype.init = function() {
+  this._handleEvents();
+}
+
+/**
+ * Toggle the isPlaying property value and publish
+ * a corresponding event
+ */
+Transport.prototype.togglePlay = function() {
+  this.isPlaying = !this.isPlaying;
+  if (this.isPlaying) {
+    this.pubsub.emit('transport:play');
+  } else {
+    this.pubsub.emit('transport:pause');
+  }
+}
+
+/**
+ * Bind listeners to events
+ * @private
+ */
+Transport.prototype._handleEvents = function() {
+  var self = this;
+
+  //click
+  this.domEl.addEventListener('click', function(e) {
+
+    // play
+    if (e.target.id === self.playId) {
+      console.log('play clicked');
+      self.togglePlay();
+    }
+
+    // pause
+    if (e.target.id === self.pauseId) {
+      console.log('pause clicked');
+      self.togglePlay();
+    }
+  }, false);
+
+  //key
+  document.addEventListener('keydown', function(e) {
+    // space bar
+    if (e.keyCode === 32) {
+      self.togglePlay();
+    }
+  });
+}
+
+/**
+ * Fired when transport is playing
+ *
+ * @event
+ * @name transport:play
+ * @memberOf Transport
+ */
+
+/**
+ * Fired when transport is paused`
+ *
+ * @event
+ * @name transport:paused
+ * @memberOf Transport
+ */
+
+module.exports = Transport;
+
+},{}],19:[function(require,module,exports){
+exports.getOffset = function getOffset(elem) {
+  var props = {},
+    rect = elem.getBoundingClientRect();
+
+  props.left = rect.left;
+  props.top = rect.top;
+
+  return props;
+}
+
+exports.getHeight = function getHeight(elem) {
+  var rect = elem.getBoundingClientRect();
+  return rect.height;
+}
+
+exports.getWidth = function getWidth(elem) {
+  var rect = elem.getBoundingClientRect();
+  return rect.width;
+}
+
+},{}],20:[function(require,module,exports){
+var App = require('./App');
+
+window.app = new App();
+
+// Bootstrap it.
+window.addEventListener('load', function () {
+  'use strict';
+
+  console.log('window load event');
+  app.init();
+
+}, false);
+
+},{"./App":6}],21:[function(require,module,exports){
+/**
+ * @var sampleUrls {array} Store urls of audio samples.
+ */
+var sampleUrls = [
+  //1 - 8
+  'audio/808/808_Clap.wav',
+  'audio/808/808_Cymbal_low.wav',
+  'audio/808/808_Hat_closed.wav',
+  'audio/808/808_Snare_hi1.wav',
+  'audio/808/808_Kick_short.wav',
+  'audio/808/808_Kick_long.wav',
+  'audio/808/808_Lo_Tom.wav',
+  'audio/808/808_Md_Conga.wav',
+  //9 - 16
+  'audio/808/808_Hi_Tom.wav',
+  'audio/808/808_Maracas.wav',
+  'audio/808/808_Rimshot.wav',
+  'audio/808/808_Clave.wav',
+  'audio/808/808_Hi_Conga.wav',
+  'audio/808/808_Cowbell.wav',
+  'audio/808/808_Md_Tom.wav',
+  'audio/808/808_Snare_lo1.wav'
+];
+
+module.exports = sampleUrls;
+
+},{}],22:[function(require,module,exports){
+/**
+ * Normalize a given value from a larger range of numbers to a smaller
+ * range of numbers.
+ *
+ * @param scaleMax {number} The largest number in the range being scaled to
+ * @param rangeMax {number} The largest number in the range the value appeared in
+ * @param value {number} The number to be scaled
+ * @return {number}
+ */
+exports.normalize = function(scaleMax, rangeMax, value) {
+  return scaleMax * (value / rangeMax);
+}
+
+},{}]},{},[20])
