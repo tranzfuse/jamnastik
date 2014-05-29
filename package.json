@@ -1,14 +1,11 @@
 {
-  "name": "audiohack",
-  "version": "0.0.1",
+  "name": "jamnastik",
+  "version": "0.0.2",
   "engine": {
     "node": "0.10.13"
   },
-  "description": "A hack week project to learn about the web audio api and arduino.",
+  "description": "A step sequencer in the browser.",
   "main": "bundle.js",
-  "scripts": {
-    "postinstall": "grunt heroku"
-  },
   "author": "Adam Smith",
   "license": "BSD",
   "devDependencies": {
@@ -30,6 +27,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "http://github.com/tranzfuse/audiohack.git"
+    "url": "http://github.com/tranzfuse/jamnastik.git"
   }
 }

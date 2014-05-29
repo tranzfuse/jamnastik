@@ -58,7 +58,7 @@ App.prototype.init = function() {
     this.tempo = new Tempo('tempo', this.pubsub);
     this.controlPanel = new ControlPanel('control-panel', 'control-panel-title', this.pubsub);
     this.scheduler = new Scheduler(this.context, this.pubsub, this.tempo.tempo);
-    this.stepSequencer = new StepSequencer('step-sequencer', this.context, this.pubsub, this.scheduler, this.socket);
+    this.stepSequencer = new StepSequencer('step-sequencer', this.context, this.pubsub, this.scheduler, this.socket, 'Drums');
     this.transport = new Transport('transport', 'play', 'pause', this.context, this.pubsub);
     this.gainControl = new GainControl('gain-control', this.socket, this.pubsub);
     this.filterControl = new FilterControl('filter-control', this.context, this.pubsub, this.socket, 'filter-toggle', 'lowpass', 440);
@@ -107,15 +107,13 @@ App.prototype.callbackLoaded = function(bufferList) {
  */
 App.prototype.handleNoSupport = function() {
   body = document.getElementsByTagName('body');
-  body[0].innerHTML('<h1>Aww snap! This browser does not support the Web Audio API.</h1>');
+  body[0].innerHTML = '<h1>Aww snap! This browser does not support the Web Audio API.</h1>';
 }
 
 /**
  *  Handle websockets events and communication
  */
 App.prototype._handleIO = function() {
-  var self = this;
-
   this.socket.emit('app:loaded');
 }
 

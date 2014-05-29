@@ -2,14 +2,14 @@ module.exports = function(grunt) {
   grunt.initConfig({
     browserify: {
       basic: {
-        src: ['js/main.js'],
+        src: ['src/js/main.js'],
         dest: 'public/js/bundle.js'
       }
     },
     sass: {
       dist: {
         files: {
-          'public/css/style.css' : 'sass/style.scss'
+          'public/css/style.css' : 'src/sass/style.scss'
         }
       }
     },
@@ -31,5 +31,4 @@ module.exports = function(grunt) {
 
   grunt.registerTask('default', ['browserify', 'sass']);
   grunt.registerTask('dev', ['watch']);
-  grunt.registerTask('heroku', ['browserify', 'sass']);
 };
