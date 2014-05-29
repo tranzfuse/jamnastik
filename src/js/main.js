@@ -6,7 +6,6 @@ window.app = new App();
 window.addEventListener('load', function () {
   'use strict';
 
-  console.log('window load event');
   app.init();
 
 }, false);

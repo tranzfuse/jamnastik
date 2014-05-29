@@ -1090,8 +1090,6 @@ App.prototype.handleNoSupport = function() {
  *  Handle websockets events and communication
  */
 App.prototype._handleIO = function() {
-  var self = this;
-
   this.socket.emit('app:loaded');
 }
 
@@ -2694,7 +2692,6 @@ window.app = new App();
 window.addEventListener('load', function () {
   'use strict';
 
-  console.log('window load event');
   app.init();
 
 }, false);
