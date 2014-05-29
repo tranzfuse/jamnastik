@@ -6,7 +6,17 @@ var j5 = require('johnny-five'),
   utils = require('./js/utils'),
   fs = require('fs'),
   crypto = require('crypto'),
-  port = process.env.PORT || 4567;
+  port = process.env.PORT || 4567,
+  redis = require('redis'),
+  client = redis.createClient(6379, '127.0.0.1');
+
+client.on('error', function(err) {
+  console.log('REDIS Error: ', err);
+});
+
+client.on('ready', function() {
+  console.log('REDIS Ready');
+});
 
 var isArduinoConnected = false;
 
@@ -40,53 +50,48 @@ app.get('/jam/:checksum', function (req, res) {
   });
 });
 
-app.post('/save', function (req, res) {
+app.post('/save', function(req, res) {
   var buffer = '',
-    filePath = 'saved/',
-    fileName,
     md5 = crypto.createHash('md5');
 
-  req.on('data', function (chunk) {
+  req.on('data', function(chunk) {
     buffer += chunk;
     md5.update(buffer);
   });
 
-  req.on('end', function () {
-    var checksum = md5.digest('hex'),
+  req.on('end', function() {
+    var key = md5.digest('hex'),
       response = {
         buffer: buffer,
-        hash: checksum
+        hash: key
       };
 
-    //create file name based on checksum
-    fileName = checksum + '.json';
+    client.get(key, function(err, reply) {
+      if (null === reply) {
+        console.log('object NOT found in redis, saving...');
 
-    //does this file already exist?
-    fs.open(filePath + fileName, 'r', function(err, fd) {
-      if (err) {
-        console.log('file not found, write to disk.');
-        console.log(response);
-
-        //save to disk
-        saveFile(filePath + fileName, response);
+        client.set(key, JSON.stringify(response), function(err, reply) {
+          if (err) {
+            //well?
+          }
+          client.get(key, function(err, reply) {
+            if (err) {
+              //well?
+            }
+            console.log('object found in redis', reply.toString());
+            res.json(reply.toString());
+          });
+        });
       }
-      //file was found, nothing to write
-      res.json(response);
+      res.json(reply);
     });
-
-    function saveFile(file, response) {
-      fs.writeFile(file, buffer, function (err) {
-        console.log('Created file: ' + fileName);
-        res.json(response);
-      });
-    }
 
   });
 
 });
 
 // manage websockets events
-io.sockets.on('connection', function (socket) {
+io.sockets.on('connection', function(socket) {
 
   socket.on('app:loaded', function() {
 

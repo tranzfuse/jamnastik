@@ -25,7 +25,8 @@
     "express": "~3.4.8",
     "socket.io": "~0.9.16",
     "johnny-five": "~0.7.15",
-    "sass": "~0.5.0"
+    "sass": "~0.5.0",
+    "redis": "~0.10.3"
   },
   "repository": {
     "type": "git",
