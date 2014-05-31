@@ -1,15 +1,18 @@
 var j5 = require('johnny-five'),
   express = require('express'),
+  exphbs  = require('express3-handlebars'),
   app = express(),
   server = require('http').createServer(app),
   io = require('socket.io').listen(server),
-  utils = require('./js/utils'),
-  fs = require('fs'),
+  utils = require('./src/js/utils'),
   crypto = require('crypto'),
   port = process.env.PORT || 4567,
   redis = require('redis'),
   client = redis.createClient(6379, '127.0.0.1');
 
+process.env.NODE_ENV = 'development';
+
+//redis client event handlers
 client.on('error', function(err) {
   console.log('REDIS Error: ', err);
 });
@@ -17,6 +20,8 @@ client.on('error', function(err) {
 client.on('ready', function() {
   console.log('REDIS Ready');
 });
+
+server.listen(port);
 
 var isArduinoConnected = false;
 
@@ -29,28 +34,28 @@ var btn1, btn2, btn3, btn4, btn5, btn6, btn7, btn8,
 
 var btnFilter;
 
-server.listen(port);
 
 // app configuration
 app.use(express.static(__dirname + '/public'));
+app.engine('handlebars', exphbs({defaultLayout: 'base'}));
+app.set('view engine', 'handlebars');
+
 
 // app routes
 app.get('/', function (req, res) {
-  res.sendfile(__dirname + '/public/index.html');
+  res.render('index');
 });
 
-app.get('/jam/:checksum', function (req, res) {
+app.get('/jam/:key', function (req, res) {
   var filePath = 'saved/',
-    fileName = req.params.checksum + '.json';
+    fileName = req.params.key + '.json';
 
-  fs.readFile(filePath + fileName, {'encoding': 'utf-8', 'flag': 'r'}, function(err, data) {
+  client.get(req.params.key, function(err, reply) {
     if (err) {
-      //maybe show some better messaging?
-      console.log('File ', fileName, ' not found.');
+      console.log('REDIS Error', err);
       res.redirect('/');
     }
-    console.log(data);
-    res.send(data);
+    res.send(reply.toString());
   });
 });
 
@@ -72,26 +77,21 @@ app.post('/save', function(req, res) {
 
     client.get(key, function(err, reply) {
       if (null === reply) {
-        console.log('object NOT found in redis, saving...');
+        console.log('object NOT found in REDIS, saving...');
 
         client.set(key, JSON.stringify(response), function(err, reply) {
           if (err) {
-            //well?
+            console.log('REDIS Error', err);
           }
-          client.get(key, function(err, reply) {
-            if (err) {
-              //well?
-            }
-            console.log('object found in redis', reply.toString());
-            res.json(reply.toString());
-          });
+          res.json(response);
         });
+
+        return;
       }
+
       res.json(reply);
     });
-
   });
-
 });
 
 // manage websockets events

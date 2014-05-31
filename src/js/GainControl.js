@@ -13,7 +13,7 @@ function GainControl(id, socket, pubsub) {
 }
 
 /**
- * Iinit setup the instance
+ * Init setup the instance
  * @param node {object} instance of context.createGainNode()
  * @return this
  */

@@ -992,6 +992,7 @@ var BufferLoader = require('./BufferLoader');
 var Sample = require('./Sample');
 var Tempo = require('./Tempo');
 var ControlPanel = require('./ControlPanel');
+var Save = require('./Save');
 
 // Sort out the AudioContext
 window.AudioContext = window.AudioContext ||
@@ -1019,6 +1020,7 @@ function App() {
   this.tempo = null;
   this.controlPanel = null;
   this.pubsub = null;
+  this.save = null;
 }
 
 /**
@@ -1048,6 +1050,7 @@ App.prototype.init = function() {
       this.sampleUrls,
       callback
     );
+    this.save = new Save('save', this.pubsub, this.filterControl, this.qControl, this.gainControl, this.tempo, this.stepSequencer);
 
     this.bufferLoader.load();
   } else {
@@ -1071,10 +1074,12 @@ App.prototype.callbackLoaded = function(bufferList) {
   this.qControl.init(this.filterControl.node);
   this.transport.init();
   this.tempo.init();
+  this.save.init();
 
   this.createSamples();
   this.stepSequencer.init(this.samples);
   this.scheduler.init(this.stepSequencer);
+
   this._handleIO();
 }
 
@@ -1116,8 +1121,7 @@ App.prototype.setBufferList = function(bufferList) {
 }
 
 /**
- * Fired when the init method is called and app is successfully
- * bootstrapped
+ * Fired when the init method is called and app is successfully bootstrapped
  *
  * @event
  * @name app:loaded
@@ -1126,7 +1130,7 @@ App.prototype.setBufferList = function(bufferList) {
 
 module.exports = App;
 
-},{"./BufferLoader":7,"./ControlPanel":8,"./FilterControl":9,"./GainControl":10,"./QControl":13,"./Sample":14,"./Scheduler":15,"./StepSequencer":16,"./Tempo":17,"./Transport":18,"./sampleUrls":21,"events":1,"util":5}],7:[function(require,module,exports){
+},{"./BufferLoader":7,"./ControlPanel":8,"./FilterControl":9,"./GainControl":10,"./QControl":13,"./Sample":14,"./Save":15,"./Scheduler":16,"./StepSequencer":17,"./Tempo":18,"./Transport":19,"./sampleUrls":22,"events":1,"util":5}],7:[function(require,module,exports){
 // Borrowed with gratitude from:
 // http://www.html5rocks.com/en/tutorials/webaudio/intro/
 function BufferLoader(context, urlList, callback) {
@@ -1822,7 +1826,7 @@ Knob.prototype._handleEvents = function() {
 
 module.exports = Knob;
 
-},{"./dom":19,"./utils":22}],12:[function(require,module,exports){
+},{"./dom":20,"./utils":23}],12:[function(require,module,exports){
 /**
  * @constructor
  */
@@ -2063,6 +2067,160 @@ module.exports = Sample;
 
 },{}],15:[function(require,module,exports){
 /**
+ * @constructor
+ */
+function Save(id, pubsub, filterControl, qControl, gainControl, tempo, stepSequencer) {
+
+  /**
+   * The save control html element's id
+   */
+  this.id = id;
+
+  /**
+   * The app pubsub instance
+   */
+  this.pubsub = pubsub;
+
+  /**
+   * The save control html element dom reference
+   */
+  this.domEl = document.getElementById(this.id);
+
+  /**
+   * The FilterControl instance
+   */
+  this.filterControl = filterControl;
+
+  /**
+   * The QControl instance
+   */
+  this.qControl = qControl;
+
+  /**
+   * The GainControl instance
+   */
+  this.gainControl = gainControl;
+
+  /**
+   * The Tempo instance
+   */
+  this.tempo = tempo;
+
+  /**
+   * The StepSequencer instance
+   */
+  this.stepSequencer = stepSequencer;
+}
+
+/**
+ * Setup the Save instance
+ * @return this
+ */
+Save.prototype.init = function() {
+  this.saveBtn = this.domEl.querySelector('.btn-save');
+  this.saveOK = this.domEl.querySelector('.glyphicon-ok');
+  this._handleEvents();
+
+  return this;
+}
+
+/**
+ * Subscribe and bind listeners to events
+ * @private
+ */
+Save.prototype._handleEvents = function() {
+  var self = this;
+
+  //click
+  this.domEl.addEventListener('click', function(e) {
+    self.save();
+  });
+
+  this.pubsub.on('save:ok', function(data) {
+    self.onOK(data);
+  });
+
+  this.pubsub.on('save:error', function(data) {
+    self.onError(data);
+  });
+}
+
+/**
+ * Save the current state of the app to localstorage
+ * and emit an event on success/fail.
+ * @TODO Create a save method for App.
+ */
+Save.prototype.save = function() {
+  var xhr,
+    self = this;
+
+  var data = {
+    q: this.qControl.domEl.value,
+    filter: this.filterControl.domEl.value,
+    filterEnabled: this.filterControl.isEnabled,
+    gain: this.gainControl.domEl.value,
+    tempo: this.tempo.getTempo(),
+    stepSequencer: this.stepSequencer.getSequence()
+  };
+
+  xhr = new XMLHttpRequest();
+
+  xhr.open('POST', '/save', true);
+
+  xhr.setRequestHeader('Content-type','application/json; charset=utf-8');
+
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState == 4) {
+      if (xhr.status == 200) {
+        console.log(xhr.responseText);
+        self.pubsub.emit('save:ok', xhr.responseText);
+      } else {
+        self.pubsub.emit('save:error', {'error': xhr.statusText});
+      }
+    }
+  }
+
+  xhr.send(JSON.stringify(data));
+}
+
+/**
+ * Handle successful save event
+ * @param ajax success response
+ */
+Save.prototype.onOK = function(data) {
+  this.saveOK.classList.remove('is-hidden');
+  console.log('data from onOK', data);
+}
+
+/**
+ * Handle failed save event
+ * @param error {object}
+ */
+Save.prototype.onError = function(error) {
+  //tell the user that save failed.
+  console.log(error);
+}
+
+/**
+ * Fired on a successful save
+ *
+ * @event
+ * @name save:ok
+ * @memberOf Save
+ */
+
+/**
+ * Fired on a failed save attempt
+ *
+ * @event
+ * @name save:error
+ * @memberOf Save
+ */
+
+module.exports = Save;
+
+},{}],16:[function(require,module,exports){
+/**
  * Great read here:
  * http://www.html5rocks.com/en/tutorials/audio/scheduling/
  *
@@ -2217,7 +2375,7 @@ Scheduler.prototype._handleEvents = function() {
 
 module.exports = Scheduler;
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 var Pad = require('./Pad');
 
 /**
@@ -2448,6 +2606,18 @@ StepSequencer.prototype.pause = function() {
 }
 
 /**
+ * Which pads are currently disabled/enabled?
+ * @return object
+ */
+StepSequencer.prototype.getSequence = function() {
+  var seq = {};
+  for (var pad in this.pads) {
+    seq[pad] = this.pads[pad].enabled;
+  }
+  return seq;
+}
+
+/**
  * Fired when the init method is called
  *
  * @event
@@ -2457,7 +2627,7 @@ StepSequencer.prototype.pause = function() {
 
 module.exports = StepSequencer;
 
-},{"./Pad":12}],17:[function(require,module,exports){
+},{"./Pad":12}],18:[function(require,module,exports){
 /**
  * @constructor
  */
@@ -2576,7 +2746,7 @@ Tempo.prototype._handleEvents = function() {
 
 module.exports = Tempo;
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 /**
  * @constructor
  */
@@ -2662,7 +2832,7 @@ Transport.prototype._handleEvents = function() {
 
 module.exports = Transport;
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 exports.getOffset = function getOffset(elem) {
   var props = {},
     rect = elem.getBoundingClientRect();
@@ -2683,7 +2853,7 @@ exports.getWidth = function getWidth(elem) {
   return rect.width;
 }
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 var App = require('./App');
 
 window.app = new App();
@@ -2696,7 +2866,7 @@ window.addEventListener('load', function () {
 
 }, false);
 
-},{"./App":6}],21:[function(require,module,exports){
+},{"./App":6}],22:[function(require,module,exports){
 /**
  * @var sampleUrls {array} Store urls of audio samples.
  */
@@ -2723,7 +2893,7 @@ var sampleUrls = [
 
 module.exports = sampleUrls;
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 /**
  * Normalize a given value from a larger range of numbers to a smaller
  * range of numbers.
@@ -2737,4 +2907,12 @@ exports.normalize = function(scaleMax, rangeMax, value) {
   return scaleMax * (value / rangeMax);
 }
 
-},{}]},{},[20])
+//http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript
+exports.uuid = function() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+      return v.toString(16);
+    });
+}
+
+},{}]},{},[21])
