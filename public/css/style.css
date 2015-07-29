@@ -47,11 +47,17 @@ h1, h2, h3, h4, h5, h6 {
 .glyphicon:empty {
   width: 1em; }
 
+.glyphicon-unchecked:before {
+  content: "\e157"; }
+
 .glyphicon-plus:before {
   content: "\2b"; }
 
 .glyphicon-minus:before {
   content: "\2212"; }
+
+.glyphicon-ok:before {
+  content: "\e013"; }
 
 .glyphicon-volume-off:before {
   content: "\e036"; }
@@ -95,6 +101,23 @@ h1, h2, h3, h4, h5, h6 {
 
 .center, .control-label {
   text-align: center; }
+
+.btn {
+  background-color: #3ab9cf;
+  border: 0.125em solid transparent;
+  border-radius: 5px;
+  color: white;
+  font: inherit;
+  font-weight: 400;
+  margin: 0;
+  padding: 0.25em 0.5em;
+  transition: all .2s ease; }
+  .btn:focus {
+    border-color: #298291;
+    outline: 0; }
+  .btn:hover {
+    background-color: #48e4ff;
+    border-color: #48e4ff; }
 
 #jamnastik {
   margin: 2em auto; }
@@ -179,16 +202,16 @@ h1, h2, h3, h4, h5, h6 {
   margin: 0 1em 1em 0;
   width: 4em; }
   .pad:hover {
-    background-color: #ccf2ff; }
+    background-color: #c9eaf0; }
   .pad.enabled {
-    background-color: #0099cc; }
+    background-color: #298291; }
   .pad:nth-of-type(8n + 0) {
     margin-right: 0; }
 
 .active > .pad {
   background-color: #eeeeee; }
   .active > .pad.enabled {
-    background-color: #007399; }
+    background-color: #1e5e69; }
 
 .step-sequencer {
   background-color: white;

@@ -228,6 +228,18 @@ StepSequencer.prototype.pause = function() {
 }
 
 /**
+ * Which pads are currently disabled/enabled?
+ * @return object
+ */
+StepSequencer.prototype.getSequence = function() {
+  var seq = {};
+  for (var pad in this.pads) {
+    seq[pad] = this.pads[pad].enabled;
+  }
+  return seq;
+}
+
+/**
  * Fired when the init method is called
  *
  * @event

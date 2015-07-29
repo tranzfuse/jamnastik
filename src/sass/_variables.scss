@@ -5,7 +5,14 @@
 $white: #fff;
 $gray-light: #eee;
 $gray-dark: #999;
-$blue-dark: #0099cc;
+
+// Color theme:
+// https://kuler.adobe.com/Potilasturva_info%231-color-theme-3441725/
+$blue-lighter: #48E4FF;
+$blue-light: #3AB9CF;
+$blue-dark: #298291;
+$blue-darker: #1A525C;
+$blue-darkest: #123940;
 
 // Scaffolding
 $body-bg: $white;
@@ -16,7 +23,6 @@ $text-color: $gray-dark;
 $font-family: 'Exo 2', verdana, sans-serif;
 $font-weight: 100;
 
-
 $border-width: .25em / 4;
 $border-color: $gray-dark;
 $border-radius: 5px;
@@ -24,6 +30,14 @@ $border-radius: 5px;
 
 // Jamnastik
 // -----------------------------------
+
+// Buttons
+$btn-border-color: $blue-light;
+$btn-border-color-hover: $blue-lighter;
+$btn-border-width: .125em;
+$btn-color: $blue-light;
+$btn-color-hover: $blue-lighter;
+$btn-padding: .5em;
 
 // Knobs
 $knob-border-color: $border-color;
